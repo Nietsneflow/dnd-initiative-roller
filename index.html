@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Initiative Roller</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
+            <h1>🎲 Initiative Roller <span class="round-badge">Round <span id="roundNumber">1</span></span></h1>
+            <div class="header-controls">
+                <button id="rerollAll" class="btn btn-primary">🎲 Re-roll</button>
+                <button id="nextRound" class="btn btn-secondary">Next Round</button>
+                <button id="viewHistory" class="btn btn-secondary">📜 History</button>
+            </div>
+        </header>
+
+        <div class="initiative-list">
+            <h2>Initiative Order</h2>
+            <div id="initiativeOrder" class="order-container">
+                <p class="empty-state">Add combatants to start rolling initiative!</p>
+            </div>
+        </div>
+
+        <div class="add-combatant">
+            <h3>Add Enemy</h3>
+            <form id="addCombatantForm">
+                <div class="form-row">
+                    <input type="text" id="combatantName" placeholder="Name" required>
+                    <input type="number" id="combatantModifier" placeholder="Initiative Modifier" value="0" required>
+                    <select id="combatantAdvantage">
+                        <option value="normal">Normal</option>
+                        <option value="advantage">Advantage</option>
+                        <option value="disadvantage">Disadvantage</option>
+                    </select>
+                    <button type="submit" class="btn btn-success">Add</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="combatants-manager">
+            <div class="combatants-section combatants-section-full">
+                <h3>Enemies</h3>
+                <div id="enemyList" class="combatant-list">
+                    <p class="empty-state-small">No enemies added</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="clearAll" class="btn btn-danger">Clear Enemies</button>
+            <button id="resetRound" class="btn btn-secondary">Reset to Round 1</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+                    <div class="setting-item">
+                        <label for="themeToggle">Theme</label>
+                        <div class="theme-toggle-container">
+                            <button id="lightTheme" class="theme-btn active">&#9728;&#65039; Light</button>
+                            <button id="darkTheme" class="theme-btn">&#127769; Dark</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Party Management</h3>
+                    
+                    <div class="add-combatant-inline">
+                        <h4>Add Party / Friendly</h4>
+                        <form id="addPartyForm">
+                            <div class="form-row">
+                                <input type="text" id="partyCombatantName" placeholder="Name" required>
+                                <input type="number" id="partyCombatantModifier" placeholder="Initiative Modifier" value="0" required>
+                                <select id="partyCombatantType">
+                                    <option value="party">Party</option>
+                                    <option value="friendly">Friendly</option>
+                                </select>
+                                <select id="partyCombatantAdvantage">
+                                    <option value="normal">Normal</option>
+                                    <option value="advantage">Advantage</option>
+                                    <option value="disadvantage">Disadvantage</option>
+                                </select>
+                                <button type="submit" class="btn btn-success">Add</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="combatants-manager">
+                        <div class="combatants-section">
+                            <h4>Party</h4>
+                            <div id="partyList" class="combatant-list">
+                                <p class="empty-state-small">No party added</p>
+                            </div>
+                        </div>
+
+                        <div class="combatants-section">
+                            <h4>Friendlies</h4>
+                            <div id="friendlyList" class="combatant-list">
+                                <p class="empty-state-small">No friendlies added</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Initiative History</h2>
+                <button class="modal-close" onclick="closeHistoryModal()">×</button>
+            </div>
+            <div id="historyContent" class="modal-body">
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
