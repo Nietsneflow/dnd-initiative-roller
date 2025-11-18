@@ -3,6 +3,8 @@ let combatants = [];
 let currentRound = 1;
 let initiativeHistory = [];
 let currentTheme = 'dark'; // default theme
+let isFirebaseReady = false;
+let isUpdatingFromFirebase = false; // Prevent feedback loops
 
 // DOM elements
 const rerollAllBtn = document.getElementById('rerollAll');
@@ -20,13 +22,24 @@ const enemyListDiv = document.getElementById('enemyList');
 const friendlyListDiv = document.getElementById('friendlyList');
 const roundNumberSpan = document.getElementById('roundNumber');
 
+// Wait for Firebase to be ready
+function waitForFirebase() {
+    return new Promise((resolve) => {
+        const checkFirebase = setInterval(() => {
+            if (window.firebaseDB) {
+                clearInterval(checkFirebase);
+                isFirebaseReady = true;
+                resolve();
+            }
+        }, 100);
+    });
+}
+
 // Initialize app
-function init() {
-    loadFromLocalStorage();
+async function init() {
+    await waitForFirebase();
+    await loadFromFirebase(); // Wait for initial data load
     setTheme(currentTheme);
-    renderCombatantLists();
-    rollAllInitiative();
-    updateRoundDisplay();
     attachEventListeners();
 }
 
@@ -34,14 +47,14 @@ function init() {
 function attachEventListeners() {
     rerollAllBtn.addEventListener('click', () => {
         rollAllInitiative();
-        saveToLocalStorage();
+        saveToFirebase();
     });
 
     nextRoundBtn.addEventListener('click', () => {
         currentRound++;
         updateRoundDisplay();
         rollAllInitiative();
-        saveToLocalStorage();
+        saveToFirebase();
     });
 
     resetRoundBtn.addEventListener('click', () => {
@@ -49,7 +62,7 @@ function attachEventListeners() {
             currentRound = 1;
             updateRoundDisplay();
             rollAllInitiative();
-            saveToLocalStorage();
+            saveToFirebase();
         }
     });
 
@@ -58,7 +71,7 @@ function attachEventListeners() {
             combatants = combatants.filter(c => c.type !== 'enemy');
             renderCombatantLists();
             rollAllInitiative();
-            saveToLocalStorage();
+            saveToFirebase();
         }
     });
 
@@ -129,7 +142,7 @@ function addCombatant() {
 
     renderCombatantLists();
     rollAllInitiative();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 // Add a new party member or friendly
@@ -173,7 +186,7 @@ function addPartyCombatant() {
 
     renderCombatantLists();
     rollAllInitiative();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 // Remove a combatant
@@ -181,7 +194,7 @@ function removeCombatant(id) {
     combatants = combatants.filter(c => c.id !== id);
     renderCombatantLists();
     rollAllInitiative();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 // Toggle advantage for a combatant
@@ -200,7 +213,7 @@ function toggleAdvantage(id) {
     
     renderCombatantLists();
     rollAllInitiative();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 // Duplicate a combatant
@@ -251,7 +264,7 @@ function duplicateCombatant(id) {
     combatants.push(duplicate);
     renderCombatantLists();
     rollAllInitiative();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 // Roll d20
@@ -622,7 +635,7 @@ function handleDrop(e) {
         
         // Save manual reorder to history
         saveToHistory();
-        saveToLocalStorage();
+        saveToFirebase();
     }
     
     // Re-render to clean up any visual artifacts
@@ -642,7 +655,87 @@ function updateRoundDisplay() {
     roundNumberSpan.textContent = currentRound;
 }
 
-// LocalStorage functions
+// Firebase functions
+function saveToFirebase() {
+    if (!isFirebaseReady || isUpdatingFromFirebase) return;
+    
+    const data = {
+        combatants: combatants,
+        currentRound: currentRound,
+        initiativeHistory: initiativeHistory,
+        theme: currentTheme,
+        lastUpdated: Date.now()
+    };
+    
+    const dbRef = window.firebaseRef(window.firebaseDB, 'gameState');
+    window.firebaseSet(dbRef, data).catch(error => {
+        console.error('Error saving to Firebase:', error);
+    });
+}
+
+function loadFromFirebase() {
+    return new Promise((resolve) => {
+        const dbRef = window.firebaseRef(window.firebaseDB, 'gameState');
+        
+        // Listen for real-time updates
+        let firstLoad = true;
+        window.firebaseOnValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log('Firebase data received:', data);
+            
+            if (data) {
+                isUpdatingFromFirebase = true;
+                
+                // Convert Firebase object/array to proper array and filter out null/undefined
+                let loadedCombatants = data.combatants || [];
+                console.log('Raw combatants from Firebase:', loadedCombatants);
+                console.log('Is array?', Array.isArray(loadedCombatants));
+                console.log('Type:', typeof loadedCombatants);
+                
+                if (typeof loadedCombatants === 'object' && !Array.isArray(loadedCombatants)) {
+                    loadedCombatants = Object.values(loadedCombatants);
+                    console.log('Converted to array:', loadedCombatants);
+                }
+                combatants = loadedCombatants.filter(c => c != null);
+                console.log('Final combatants after filter:', combatants);
+                
+                let loadedHistory = data.initiativeHistory || [];
+                if (typeof loadedHistory === 'object' && !Array.isArray(loadedHistory)) {
+                    loadedHistory = Object.values(loadedHistory);
+                }
+                initiativeHistory = loadedHistory.filter(h => h != null);
+                
+                currentRound = data.currentRound || 1;
+                currentTheme = data.theme || 'dark';
+                
+                setTheme(currentTheme);
+                renderCombatantLists();
+                renderInitiativeOrder();
+                updateRoundDisplay();
+                
+                isUpdatingFromFirebase = false;
+                
+                if (firstLoad) {
+                    firstLoad = false;
+                    resolve();
+                }
+            } else {
+                console.log('No data in Firebase');
+                // No data yet, render empty state
+                renderCombatantLists();
+                renderInitiativeOrder();
+                updateRoundDisplay();
+                
+                if (firstLoad) {
+                    firstLoad = false;
+                    resolve();
+                }
+            }
+        });
+    });
+}
+
+// Keep localStorage functions for backward compatibility / local backup
 function saveToLocalStorage() {
     const data = {
         combatants: combatants,
@@ -689,7 +782,7 @@ function setTheme(theme) {
     currentTheme = theme;
     document.body.setAttribute('data-theme', theme);
     updateThemeButtons();
-    saveToLocalStorage();
+    saveToFirebase();
 }
 
 function updateThemeButtons() {
