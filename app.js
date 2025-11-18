@@ -41,11 +41,11 @@ const togglePasswordBtn = document.getElementById('togglePasswordBtn');
 function togglePasswordVisibility() {
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        togglePasswordBtn.textContent = '🙈';
+        togglePasswordBtn.textContent = 'Hide';
         togglePasswordBtn.title = 'Hide password';
     } else {
         passwordInput.type = 'password';
-        togglePasswordBtn.textContent = '👁️';
+        togglePasswordBtn.textContent = 'Show';
         togglePasswordBtn.title = 'Show password';
     }
 }
@@ -256,10 +256,9 @@ async function init() {
         togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
     }
     
-    await waitForFirebase();
-    
-    // Check if user has valid app password token
+    // Check if user has valid app password token BEFORE waiting for Firebase
     if (checkAuth()) {
+        await waitForFirebase();
         // They have app token, try to authenticate with Firebase
         try {
             await window.firebaseSignInAnonymously(window.firebaseAuth);
@@ -279,7 +278,8 @@ async function init() {
             }
         }
     } else {
-        // No authentication, show password modal
+        // No authentication, wait for Firebase then show password modal
+        await waitForFirebase();
         showPasswordModal();
     }
 }
