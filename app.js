@@ -279,21 +279,25 @@ async function init() {
         await waitForFirebase();
         // They have app token, try to authenticate with Firebase
         try {
-            await window.firebaseSignInAnonymously(window.firebaseAuth);
-            isAuthenticated = true;
-            await initializeApp();
-        } catch (error) {
-            // If already signed in, that's fine
-            if (error.code === 'auth/user-already-exists' || window.firebaseAuth.currentUser) {
+            // Check if already signed in to Firebase
+            if (window.firebaseAuth.currentUser) {
+                console.log('Already signed in to Firebase:', window.firebaseAuth.currentUser.uid);
                 isAuthenticated = true;
                 await initializeApp();
             } else {
-                console.error('Re-authentication failed:', error);
-                // Clear invalid token
+                // Not signed in, do anonymous sign in
+                await window.firebaseSignInAnonymously(window.firebaseAuth);
+                isAuthenticated = true;
+                await initializeApp();
+            }
+        } catch (error) {
+            console.error('Re-authentication failed:', error);
+            // Only clear token if it's a real auth error, not just already signed in
+            if (error.code !== 'auth/user-already-exists') {
                 localStorage.removeItem('dndAuthToken');
                 localStorage.removeItem('dndAuthExpiry');
-                showPasswordModal();
             }
+            showPasswordModal();
         }
     } else {
         // No authentication, wait for Firebase then show password modal
