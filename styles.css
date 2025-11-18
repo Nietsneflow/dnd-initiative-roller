@@ -908,6 +908,34 @@ h1 {
     accent-color: #7c3aed;
 }
 
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    flex: 1;
+    padding-right: 50px;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.3em;
+    padding: 5px 10px;
+    color: #888;
+    transition: color 0.3s ease;
+    line-height: 1;
+}
+
+.toggle-password-btn:hover {
+    color: #7c3aed;
+}
+
 .form-actions {
     margin-top: 25px;
 }
@@ -1343,6 +1371,14 @@ body[data-theme="light"] .password-error {
     background: rgba(220, 38, 38, 0.1);
     border-color: #dc2626;
     color: #b91c1c;
+}
+
+body[data-theme="light"] .toggle-password-btn {
+    color: #666;
+}
+
+body[data-theme="light"] .toggle-password-btn:hover {
+    color: #667eea;
 }
 
 body[data-theme="light"] .add-combatant-inline {

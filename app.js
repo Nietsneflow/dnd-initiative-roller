@@ -35,6 +35,20 @@ const passwordInput = document.getElementById('passwordInput');
 const passwordError = document.getElementById('passwordError');
 const rememberMeCheckbox = document.getElementById('rememberMe');
 const logoutBtn = document.getElementById('logoutBtn');
+const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        togglePasswordBtn.textContent = '🙈';
+        togglePasswordBtn.title = 'Hide password';
+    } else {
+        passwordInput.type = 'password';
+        togglePasswordBtn.textContent = '👁️';
+        togglePasswordBtn.title = 'Show password';
+    }
+}
 
 // Check authentication on page load
 function checkAuth() {
@@ -74,12 +88,17 @@ function handlePasswordSubmit(e) {
     e.preventDefault();
     
     const enteredPassword = passwordInput.value;
+    console.log('Password entered, length:', enteredPassword.length);
+    console.log('Expected password:', APP_PASSWORD);
+    console.log('Match:', enteredPassword === APP_PASSWORD);
     
     if (enteredPassword === APP_PASSWORD) {
         // Correct password - authenticate with Firebase
+        console.log('Password correct, authenticating with Firebase...');
         authenticateWithFirebase();
     } else {
         // Wrong password
+        console.log('Password incorrect');
         passwordError.textContent = '❌ Incorrect password. Please try again.';
         passwordError.classList.add('show');
         passwordInput.value = '';
@@ -94,6 +113,8 @@ function handlePasswordSubmit(e) {
 // Authenticate with Firebase anonymously
 async function authenticateWithFirebase() {
     try {
+        console.log('Starting Firebase authentication...');
+        
         // Show loading state
         passwordError.textContent = '🔄 Authenticating...';
         passwordError.style.background = 'rgba(124, 58, 237, 0.2)';
@@ -102,10 +123,14 @@ async function authenticateWithFirebase() {
         passwordError.classList.add('show');
         
         // Wait for Firebase to be ready
+        console.log('Waiting for Firebase...');
         await waitForFirebase();
+        console.log('Firebase ready!');
         
-        // Sign in anonymously with Firebase
-        await window.firebaseSignInAnonymously(window.firebaseAuth);
+        // Check if Firebase Anonymous Auth is enabled
+        console.log('Attempting anonymous sign in...');
+        const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
+        console.log('Firebase authentication successful!', userCredential.user.uid);
         
         // Authentication successful
         isAuthenticated = true;
@@ -116,14 +141,30 @@ async function authenticateWithFirebase() {
             const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
             localStorage.setItem('dndAuthToken', authToken);
             localStorage.setItem('dndAuthExpiry', expiry.toString());
+            console.log('Auth token saved');
         }
         
         hidePasswordModal();
+        console.log('Initializing app...');
         await initializeApp(); // Continue with app initialization
+        console.log('App initialized!');
         
     } catch (error) {
         console.error('Firebase authentication error:', error);
-        passwordError.textContent = '❌ Authentication failed. Please try again.';
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        let errorMessage = '❌ Authentication failed. ';
+        
+        if (error.code === 'auth/operation-not-allowed') {
+            errorMessage += 'Anonymous authentication is not enabled in Firebase. Check FIREBASE_RULES.txt';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage += 'Network error. Check your internet connection.';
+        } else {
+            errorMessage += error.message;
+        }
+        
+        passwordError.textContent = errorMessage;
         passwordError.style.background = 'rgba(220, 38, 38, 0.2)';
         passwordError.style.borderColor = '#dc2626';
         passwordError.style.color = '#fca5a5';
@@ -131,9 +172,7 @@ async function authenticateWithFirebase() {
         passwordInput.value = '';
         passwordInput.focus();
         
-        setTimeout(() => {
-            passwordError.classList.remove('show');
-        }, 3000);
+        // Don't auto-hide error for auth failures
     }
 }
 
@@ -241,6 +280,11 @@ async function init() {
 function attachEventListeners() {
     // Password form
     passwordForm.addEventListener('submit', handlePasswordSubmit);
+    
+    // Toggle password visibility
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+    }
     
     // Logout button
     logoutBtn.addEventListener('click', () => {
