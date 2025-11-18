@@ -718,14 +718,32 @@ function loadFromFirebase() {
                     loadedCombatants = Object.values(loadedCombatants);
                     console.log('Converted to array:', loadedCombatants);
                 }
-                combatants = loadedCombatants.filter(c => c != null);
+                
+                // Ensure all properties are null instead of undefined
+                combatants = loadedCombatants.filter(c => c != null).map(c => ({
+                    ...c,
+                    manualOrder: c.manualOrder ?? null,
+                    wasMoved: c.wasMoved ?? false,
+                    moveDirection: c.moveDirection ?? null,
+                    originalIndex: c.originalIndex ?? null
+                }));
                 console.log('Final combatants after filter:', combatants);
                 
                 let loadedHistory = data.initiativeHistory || [];
                 if (typeof loadedHistory === 'object' && !Array.isArray(loadedHistory)) {
                     loadedHistory = Object.values(loadedHistory);
                 }
-                initiativeHistory = loadedHistory.filter(h => h != null);
+                
+                // Clean history entries to ensure no undefined values
+                initiativeHistory = loadedHistory.filter(h => h != null).map(entry => ({
+                    ...entry,
+                    combatants: entry.combatants ? entry.combatants.map(c => ({
+                        ...c,
+                        manualOrder: c.manualOrder ?? null,
+                        wasMoved: c.wasMoved ?? false,
+                        moveDirection: c.moveDirection ?? null
+                    })) : []
+                }));
                 
                 currentRound = data.currentRound || 1;
                 currentTheme = data.theme || 'dark';
