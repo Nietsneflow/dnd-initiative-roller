@@ -325,9 +325,9 @@ function saveToHistory() {
             baseRoll: c.baseRoll,
             advantage: c.advantage,
             rolls: c.rolls,
-            manualOrder: c.manualOrder,
-            wasMoved: c.wasMoved,
-            moveDirection: c.moveDirection
+            manualOrder: c.manualOrder ?? null,
+            wasMoved: c.wasMoved ?? false,
+            moveDirection: c.moveDirection ?? null
         }))
     };
     
@@ -674,10 +674,17 @@ function saveToFirebase() {
         return obj;
     };
     
+    // Clean history to remove entries with undefined values
+    const cleanedHistory = initiativeHistory.filter(entry => {
+        if (!entry || !entry.combatants) return false;
+        // Check if any combatant has undefined moveDirection
+        return !entry.combatants.some(c => c.moveDirection === undefined || c.wasMoved === undefined);
+    });
+    
     const data = {
         combatants: cleanData(combatants),
         currentRound: currentRound,
-        initiativeHistory: cleanData(initiativeHistory),
+        initiativeHistory: cleanData(cleanedHistory),
         theme: currentTheme,
         lastUpdated: Date.now()
     };
