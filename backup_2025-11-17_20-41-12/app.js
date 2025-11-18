@@ -117,45 +117,14 @@ function attachEventListeners() {
 
     viewHistoryBtn.addEventListener('click', () => {
         showHistoryModal();
-        // Close mobile menu if open
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (mobileMenu) mobileMenu.classList.remove('active');
     });
 
-    const managePartyBtn = document.getElementById('managePartyBtn');
-    if (managePartyBtn) {
-        managePartyBtn.addEventListener('click', () => {
-            showManagePartyModal();
-            // Close mobile menu if open
-            const mobileMenu = document.getElementById('mobileMenu');
-            if (mobileMenu) mobileMenu.classList.remove('active');
-        });
-    }
+    settingsBtn.addEventListener('click', () => {
+        showSettingsModal();
+    });
 
     manageCampaignsBtn.addEventListener('click', () => {
         showCampaignModal();
-        // Close mobile menu if open
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (mobileMenu) mobileMenu.classList.remove('active');
-    });
-
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', () => {
-            const mobileMenu = document.getElementById('mobileMenu');
-            mobileMenu.classList.toggle('active');
-        });
-    }
-
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-        const mobileMenu = document.getElementById('mobileMenu');
-        const menuToggle = document.getElementById('menuToggle');
-        if (mobileMenu && menuToggle && 
-            !mobileMenu.contains(e.target) && 
-            !menuToggle.contains(e.target)) {
-            mobileMenu.classList.remove('active');
-        }
     });
 
     campaignDropdown.addEventListener('change', (e) => {
@@ -525,7 +494,7 @@ function renderCombatantLists() {
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
+                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})">Remove</button>
                     </div>
                 </div>
             `;
@@ -557,7 +526,7 @@ function renderCombatantLists() {
                     <div class="combatant-actions">
                         <button class="btn-copy" onclick="duplicateCombatant(${combatant.id})" title="Duplicate this enemy">Copy</button>
                         <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
+                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})">Remove</button>
                     </div>
                 </div>
             `;
@@ -588,7 +557,7 @@ function renderCombatantLists() {
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
+                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})">Remove</button>
                     </div>
                 </div>
             `;
@@ -916,23 +885,15 @@ function loadFromLocalStorage() {
     }
 }
 
-// Show manage party modal
-function showManagePartyModal() {
-    const modal = document.getElementById('managePartyModal');
+// Show settings modal
+function showSettingsModal() {
+    const modal = document.getElementById('settingsModal');
     updateThemeButtons();
-    renderCombatantLists();
-    
-    // Update campaign name in header
-    const campaignNameSpan = document.getElementById('managePartyCampaignName');
-    if (campaignNameSpan && currentCampaignId && campaigns[currentCampaignId]) {
-        campaignNameSpan.textContent = `- ${campaigns[currentCampaignId].name}`;
-    }
-    
     modal.style.display = 'flex';
 }
 
-function closeManagePartyModal() {
-    const modal = document.getElementById('managePartyModal');
+function closeSettingsModal() {
+    const modal = document.getElementById('settingsModal');
     modal.style.display = 'none';
 }
 
@@ -1152,8 +1113,8 @@ function renderCampaignList() {
                 </div>
                 <div class="campaign-actions">
                     ${!isActive ? `<button class="btn btn-small btn-primary" onclick="switchCampaign('${id}')">Switch</button>` : ''}
-                    <button class="btn btn-small btn-secondary" onclick="showEditCampaignModal('${id}', '${campaigns[id].name.replace(/'/g, "\\'")}')" title="Rename">Edit</button>
-                    <button class="btn btn-small btn-danger" onclick="if(confirm('Delete ${campaigns[id].name}?')) deleteCampaign('${id}')" title="Delete">✖</button>
+                    <button class="btn btn-small btn-secondary" onclick="showEditCampaignModal('${id}', '${campaigns[id].name.replace(/'/g, "\\'")}')">Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="if(confirm('Delete ${campaigns[id].name}?')) deleteCampaign('${id}')">Delete</button>
                 </div>
             </div>
         `;

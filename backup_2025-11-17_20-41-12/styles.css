@@ -84,100 +84,6 @@ header {
     transform: rotate(30deg);
 }
 
-.menu-toggle {
-    justify-self: end;
-    background: none;
-    border: none;
-    font-size: 1.8em;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    opacity: 0.7;
-    color: #7c3aed;
-}
-
-.menu-toggle:hover {
-    opacity: 1;
-    background: rgba(124, 58, 237, 0.2);
-}
-
-.mobile-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: #1e1e2e;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-    margin-top: 10px;
-    min-width: 200px;
-}
-
-.mobile-menu.active {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.mobile-menu .menu-item {
-    width: 100%;
-    text-align: left;
-    border-radius: 0;
-    padding: 12px 20px;
-    justify-content: flex-start;
-}
-
-.mobile-menu .menu-item:first-child {
-    border-radius: 8px 8px 0 0;
-}
-
-.mobile-menu .menu-item:last-child {
-    border-radius: 0 0 8px 8px;
-}
-
-.mobile-menu .menu-item:hover {
-    background: #2d2d3d;
-    transform: none;
-}
-
-.theme-toggle-menu {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
-    border-top: 1px solid #4a5568;
-    gap: 10px;
-}
-
-.theme-toggle-menu .theme-label {
-    color: #e0e0e0;
-    font-size: 0.9em;
-}
-
-.theme-toggle-menu .theme-btn {
-    padding: 8px 12px;
-    border: 2px solid #4a5568;
-    border-radius: 8px;
-    background: #2d2d3d;
-    color: #b0b0b0;
-    font-size: 1.2em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 45px;
-}
-
-.theme-toggle-menu .theme-btn:hover {
-    border-color: #7c3aed;
-}
-
-.theme-toggle-menu .theme-btn.active {
-    background: #7c3aed;
-    color: white;
-    border-color: #7c3aed;
-}
-
 .header-center {
     grid-column: 2;
     display: flex;
@@ -494,12 +400,6 @@ h1 {
     grid-column: 1 / -1;
 }
 
-.manage-party-modal .combatants-manager {
-    grid-template-columns: 1fr;
-    gap: 15px;
-    margin-bottom: 0;
-}
-
 .settings-section .combatants-manager {
     grid-template-columns: 1fr 1fr;
     margin-bottom: 0;
@@ -691,12 +591,6 @@ h1 {
 .modal-header h2 {
     color: #7c3aed;
     margin: 0;
-}
-
-.modal-subtitle {
-    font-size: 0.7em;
-    color: #888;
-    font-weight: normal;
 }
 
 .modal-close {
@@ -1063,10 +957,6 @@ body[data-theme="light"] .history-header h3 {
     color: #667eea;
 }
 
-body[data-theme="light"] .modal-subtitle {
-    color: #666;
-}
-
 body[data-theme="light"] #roundNumber {
     color: #667eea;
 }
@@ -1235,47 +1125,6 @@ body[data-theme="light"] .settings-btn:hover {
     background: rgba(102, 126, 234, 0.2);
 }
 
-body[data-theme="light"] .menu-toggle {
-    color: #667eea;
-}
-
-body[data-theme="light"] .menu-toggle:hover {
-    background: rgba(102, 126, 234, 0.2);
-}
-
-body[data-theme="light"] .mobile-menu {
-    background: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-body[data-theme="light"] .mobile-menu .menu-item:hover {
-    background: #f8f9fa;
-}
-
-body[data-theme="light"] .theme-toggle-menu {
-    border-top-color: #ddd;
-}
-
-body[data-theme="light"] .theme-toggle-menu .theme-label {
-    color: #333;
-}
-
-body[data-theme="light"] .theme-toggle-menu .theme-btn {
-    background: #f8f9fa;
-    color: #666;
-    border-color: #ddd;
-}
-
-body[data-theme="light"] .theme-toggle-menu .theme-btn:hover {
-    border-color: #667eea;
-}
-
-body[data-theme="light"] .theme-toggle-menu .theme-btn.active {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
 body[data-theme="light"] .settings-section {
     border-bottom-color: #ddd;
 }
@@ -1392,13 +1241,18 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
 
     .campaign-selector {
         justify-self: stretch;
-        flex-direction: row;
+        flex-direction: column;
         gap: 8px;
     }
 
     .campaign-selector select {
         width: 100%;
         font-size: 0.9em;
+    }
+
+    .campaign-selector .btn {
+        width: 100%;
+        font-size: 0.85em;
     }
 
     .header-center {
@@ -1409,9 +1263,8 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
         font-size: 1.4em;
     }
 
-    .menu-toggle {
+    .settings-btn {
         justify-self: center;
-        font-size: 2em;
     }
 
     .round-badge {
