@@ -154,6 +154,10 @@
         window.firebaseSet = set;
         window.firebaseOnValue = onValue;
         window.firebaseUpdate = update;
+        
+        // Signal that Firebase is ready
+        window.firebaseReady = true;
+        console.log('Firebase initialized successfully');
     </script>
     <script src="app.js"></script>
 </body>
