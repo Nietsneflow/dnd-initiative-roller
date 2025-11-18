@@ -39,6 +39,19 @@ function waitForFirebase() {
 async function init() {
     await waitForFirebase();
     await loadFromFirebase(); // Wait for initial data load
+    
+    // One-time cleanup: clear history if it has any undefined values
+    const hasUndefined = initiativeHistory.some(entry => 
+        entry.combatants && entry.combatants.some(c => 
+            c.moveDirection === undefined || c.wasMoved === undefined
+        )
+    );
+    if (hasUndefined) {
+        console.log('Detected undefined values in history, clearing...');
+        initiativeHistory = [];
+        saveToFirebase();
+    }
+    
     setTheme(currentTheme);
     attachEventListeners();
 }
@@ -659,32 +672,31 @@ function updateRoundDisplay() {
 function saveToFirebase() {
     if (!isFirebaseReady || isUpdatingFromFirebase) return;
     
-    // Convert undefined to null for Firebase compatibility
+    // Convert undefined to null for Firebase compatibility - DEEP cleaning
     const cleanData = (obj) => {
         if (obj === undefined) return null;
         if (obj === null) return null;
-        if (Array.isArray(obj)) return obj.map(cleanData);
+        if (Array.isArray(obj)) {
+            return obj.map(item => cleanData(item)).filter(item => item !== null);
+        }
         if (typeof obj === 'object') {
             const cleaned = {};
             for (const key in obj) {
-                cleaned[key] = cleanData(obj[key]);
+                const value = cleanData(obj[key]);
+                // Only include if value is not undefined
+                if (value !== undefined) {
+                    cleaned[key] = value;
+                }
             }
             return cleaned;
         }
         return obj;
     };
     
-    // Clean history to remove entries with undefined values
-    const cleanedHistory = initiativeHistory.filter(entry => {
-        if (!entry || !entry.combatants) return false;
-        // Check if any combatant has undefined moveDirection
-        return !entry.combatants.some(c => c.moveDirection === undefined || c.wasMoved === undefined);
-    });
-    
     const data = {
         combatants: cleanData(combatants),
         currentRound: currentRound,
-        initiativeHistory: cleanData(cleanedHistory),
+        initiativeHistory: cleanData(initiativeHistory),
         theme: currentTheme,
         lastUpdated: Date.now()
     };
