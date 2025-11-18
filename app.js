@@ -697,7 +697,6 @@ function saveToFirebase() {
         combatants: cleanData(combatants),
         currentRound: currentRound,
         initiativeHistory: cleanData(initiativeHistory),
-        theme: currentTheme,
         lastUpdated: Date.now()
     };
     
@@ -758,8 +757,10 @@ function loadFromFirebase() {
                 }));
                 
                 currentRound = data.currentRound || 1;
-                currentTheme = data.theme || 'dark';
                 
+                // Load theme from localStorage (device-specific)
+                const savedTheme = localStorage.getItem('dndTheme') || 'dark';
+                currentTheme = savedTheme;
                 setTheme(currentTheme);
                 renderCombatantLists();
                 renderInitiativeOrder();
@@ -834,7 +835,8 @@ function setTheme(theme) {
     currentTheme = theme;
     document.body.setAttribute('data-theme', theme);
     updateThemeButtons();
-    saveToFirebase();
+    // Save theme to localStorage (device-specific, not synced)
+    localStorage.setItem('dndTheme', theme);
 }
 
 function updateThemeButtons() {
