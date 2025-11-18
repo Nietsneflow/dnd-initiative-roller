@@ -14,7 +14,6 @@ const nextRoundBtn = document.getElementById('nextRound');
 const resetRoundBtn = document.getElementById('resetRound');
 const clearAllBtn = document.getElementById('clearAll');
 const viewHistoryBtn = document.getElementById('viewHistory');
-const settingsBtn = document.getElementById('settingsBtn');
 const manageCampaignsBtn = document.getElementById('manageCampaignsBtn');
 const campaignDropdown = document.getElementById('campaignDropdown');
 const createCampaignForm = document.getElementById('createCampaignForm');
@@ -886,36 +885,6 @@ function loadFromFirebase() {
     });
 }
 
-// Keep localStorage functions for backward compatibility / local backup
-function saveToLocalStorage() {
-    const data = {
-        combatants: combatants,
-        currentRound: currentRound,
-        initiativeHistory: initiativeHistory,
-        theme: currentTheme
-    };
-    localStorage.setItem('dndInitiative', JSON.stringify(data));
-}
-
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem('dndInitiative');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            combatants = data.combatants || [];
-            currentRound = data.currentRound || 1;
-            initiativeHistory = data.initiativeHistory || [];
-            currentTheme = data.theme || 'dark';
-        } catch (e) {
-            console.error('Error loading saved data:', e);
-            combatants = [];
-            currentRound = 1;
-            initiativeHistory = [];
-            currentTheme = 'dark';
-        }
-    }
-}
-
 // Show manage party modal
 function showManagePartyModal() {
     const modal = document.getElementById('managePartyModal');
@@ -1231,12 +1200,8 @@ function closeHistoryModal() {
 // Close modal when clicking outside
 window.addEventListener('click', (e) => {
     const historyModal = document.getElementById('historyModal');
-    const settingsModal = document.getElementById('settingsModal');
     if (e.target === historyModal) {
         closeHistoryModal();
-    }
-    if (e.target === settingsModal) {
-        closeSettingsModal();
     }
 });
 

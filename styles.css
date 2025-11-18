@@ -66,24 +66,6 @@ header {
     font-size: 0.85em;
 }
 
-.settings-btn {
-    justify-self: end;
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    opacity: 0.7;
-}
-
-.settings-btn:hover {
-    opacity: 1;
-    background: rgba(124, 58, 237, 0.2);
-    transform: rotate(30deg);
-}
-
 .menu-toggle {
     justify-self: end;
     background: none;
@@ -500,11 +482,6 @@ h1 {
     margin-bottom: 0;
 }
 
-.settings-section .combatants-manager {
-    grid-template-columns: 1fr 1fr;
-    margin-bottom: 0;
-}
-
 .combatants-section {
     background: #2d2d3d;
     padding: 20px;
@@ -836,31 +813,7 @@ h1 {
     color: white;
 }
 
-/* Settings Styles */
-.settings-section {
-    margin-bottom: 30px;
-    padding-bottom: 30px;
-    border-bottom: 2px solid #4a5568;
-}
-
-.settings-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.settings-section h3 {
-    color: #7c3aed;
-    margin-bottom: 20px;
-    font-size: 1.4em;
-}
-
-.settings-section h4 {
-    color: #7c3aed;
-    margin-bottom: 15px;
-    font-size: 1.1em;
-}
-
+/* Campaign Management Styles */
 .add-combatant-inline {
     background: #2d2d3d;
     padding: 20px;
@@ -1231,10 +1184,6 @@ body[data-theme="light"] .history-calc {
     color: #666;
 }
 
-body[data-theme="light"] .settings-btn:hover {
-    background: rgba(102, 126, 234, 0.2);
-}
-
 body[data-theme="light"] .menu-toggle {
     color: #667eea;
 }
@@ -1274,15 +1223,6 @@ body[data-theme="light"] .theme-toggle-menu .theme-btn.active {
     background: #667eea;
     color: white;
     border-color: #667eea;
-}
-
-body[data-theme="light"] .settings-section {
-    border-bottom-color: #ddd;
-}
-
-body[data-theme="light"] .settings-section h3,
-body[data-theme="light"] .settings-section h4 {
-    color: #667eea;
 }
 
 body[data-theme="light"] .add-combatant-inline {
@@ -1573,12 +1513,6 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
 
     .combatant-actions button {
         flex: 1;
-    }
-
-    .settings-btn {
-        font-size: 1.5em;
-        top: -5px;
-        right: -5px;
     }
 }
 
