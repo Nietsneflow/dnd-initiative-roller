@@ -259,7 +259,8 @@ async function init() {
     // Attach hamburger menu listener immediately (needed for mobile before auth)
     const menuToggle = document.getElementById('menuToggle');
     if (menuToggle) {
-        menuToggle.addEventListener('click', () => {
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent immediate closing
             const mobileMenu = document.getElementById('mobileMenu');
             if (mobileMenu) mobileMenu.classList.toggle('active');
         });
@@ -268,10 +269,7 @@ async function init() {
     // Close mobile menu when clicking outside
     document.addEventListener('click', (e) => {
         const mobileMenu = document.getElementById('mobileMenu');
-        const menuToggle = document.getElementById('menuToggle');
-        if (mobileMenu && menuToggle && 
-            !mobileMenu.contains(e.target) && 
-            !menuToggle.contains(e.target)) {
+        if (mobileMenu && !mobileMenu.contains(e.target)) {
             mobileMenu.classList.remove('active');
         }
     });
