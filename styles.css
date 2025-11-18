@@ -914,7 +914,8 @@ h1 {
     align-items: center;
 }
 
-.password-input-wrapper input {
+.password-input-wrapper input[type="password"],
+.password-input-wrapper input[type="text"] {
     flex: 1;
     padding-right: 50px;
 }
@@ -1361,13 +1362,15 @@ body[data-theme="light"] .theme-toggle-menu .theme-btn.active {
     border-color: #667eea;
 }
 
-body[data-theme="light"] .form-group input[type="password"] {
+body[data-theme="light"] .form-group input[type="password"],
+body[data-theme="light"] .form-group input[type="text"] {
     background: #f8f9fa;
     border-color: #ddd;
     color: #333;
 }
 
-body[data-theme="light"] .form-group input[type="password"]:focus {
+body[data-theme="light"] .form-group input[type="password"]:focus,
+body[data-theme="light"] .form-group input[type="text"]:focus {
     border-color: #667eea;
 }
 

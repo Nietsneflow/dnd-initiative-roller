@@ -256,6 +256,26 @@ async function init() {
         togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
     }
     
+    // Attach hamburger menu listener immediately (needed for mobile before auth)
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            const mobileMenu = document.getElementById('mobileMenu');
+            if (mobileMenu) mobileMenu.classList.toggle('active');
+        });
+    }
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+        const mobileMenu = document.getElementById('mobileMenu');
+        const menuToggle = document.getElementById('menuToggle');
+        if (mobileMenu && menuToggle && 
+            !mobileMenu.contains(e.target) && 
+            !menuToggle.contains(e.target)) {
+            mobileMenu.classList.remove('active');
+        }
+    });
+    
     // Check if user has valid app password token BEFORE waiting for Firebase
     if (checkAuth()) {
         await waitForFirebase();
@@ -350,24 +370,7 @@ function attachEventListeners() {
         if (mobileMenu) mobileMenu.classList.remove('active');
     });
 
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', () => {
-            const mobileMenu = document.getElementById('mobileMenu');
-            mobileMenu.classList.toggle('active');
-        });
-    }
-
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-        const mobileMenu = document.getElementById('mobileMenu');
-        const menuToggle = document.getElementById('menuToggle');
-        if (mobileMenu && menuToggle && 
-            !mobileMenu.contains(e.target) && 
-            !menuToggle.contains(e.target)) {
-            mobileMenu.classList.remove('active');
-        }
-    });
+    // Note: Hamburger menu listeners are now attached in init() before Firebase loads
 
     campaignDropdown.addEventListener('change', (e) => {
         const selectedCampaignId = e.target.value;
