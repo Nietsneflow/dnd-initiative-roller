@@ -7,6 +7,10 @@ let isFirebaseReady = false;
 let isUpdatingFromFirebase = false; // Prevent feedback loops
 let currentCampaignId = null; // Current active campaign
 let campaigns = {}; // List of all campaigns {id: {name, lastUpdated}}
+let isAuthenticated = false; // Authentication state
+
+// Password configuration - CHANGE THIS TO YOUR PASSWORD
+const APP_PASSWORD = 'dnd2025'; // Change this to your desired password
 
 // DOM elements
 const rerollAllBtn = document.getElementById('rerollAll');
@@ -26,6 +30,87 @@ const partyListDiv = document.getElementById('partyList');
 const enemyListDiv = document.getElementById('enemyList');
 const friendlyListDiv = document.getElementById('friendlyList');
 const roundNumberSpan = document.getElementById('roundNumber');
+const passwordForm = document.getElementById('passwordForm');
+const passwordInput = document.getElementById('passwordInput');
+const passwordError = document.getElementById('passwordError');
+const rememberMeCheckbox = document.getElementById('rememberMe');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// Check authentication on page load
+function checkAuth() {
+    const authToken = localStorage.getItem('dndAuthToken');
+    const authExpiry = localStorage.getItem('dndAuthExpiry');
+    
+    if (authToken && authExpiry) {
+        const now = Date.now();
+        if (now < parseInt(authExpiry)) {
+            // Token is still valid
+            isAuthenticated = true;
+            return true;
+        } else {
+            // Token expired
+            localStorage.removeItem('dndAuthToken');
+            localStorage.removeItem('dndAuthExpiry');
+        }
+    }
+    
+    return false;
+}
+
+// Show/hide password modal
+function showPasswordModal() {
+    const modal = document.getElementById('passwordModal');
+    modal.style.display = 'flex';
+    passwordInput.focus();
+}
+
+function hidePasswordModal() {
+    const modal = document.getElementById('passwordModal');
+    modal.style.display = 'none';
+}
+
+// Handle password submission
+function handlePasswordSubmit(e) {
+    e.preventDefault();
+    
+    const enteredPassword = passwordInput.value;
+    
+    if (enteredPassword === APP_PASSWORD) {
+        // Correct password
+        isAuthenticated = true;
+        
+        // Save auth token if "Remember Me" is checked
+        if (rememberMeCheckbox.checked) {
+            const authToken = btoa(APP_PASSWORD + Date.now()); // Simple token
+            const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
+            localStorage.setItem('dndAuthToken', authToken);
+            localStorage.setItem('dndAuthExpiry', expiry.toString());
+        }
+        
+        hidePasswordModal();
+        initializeApp(); // Continue with app initialization
+    } else {
+        // Wrong password
+        passwordError.textContent = '❌ Incorrect password. Please try again.';
+        passwordError.classList.add('show');
+        passwordInput.value = '';
+        passwordInput.focus();
+        
+        setTimeout(() => {
+            passwordError.classList.remove('show');
+        }, 3000);
+    }
+}
+
+// Handle logout
+function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('dndAuthToken');
+        localStorage.removeItem('dndAuthExpiry');
+        isAuthenticated = false;
+        location.reload(); // Reload page to show password prompt
+    }
+}
 
 // Wait for Firebase to be ready
 function waitForFirebase() {
@@ -40,8 +125,8 @@ function waitForFirebase() {
     });
 }
 
-// Initialize app
-async function init() {
+// Initialize app (called after authentication)
+async function initializeApp() {
     // Load device-specific theme BEFORE Firebase loads
     const savedTheme = localStorage.getItem('dndTheme') || 'dark';
     currentTheme = savedTheme;
@@ -82,8 +167,31 @@ async function init() {
     attachEventListeners();
 }
 
+// Main init function (checks auth first)
+async function init() {
+    // Check if user is authenticated
+    if (checkAuth()) {
+        // Already authenticated, continue with app
+        await initializeApp();
+    } else {
+        // Not authenticated, show password modal
+        showPasswordModal();
+    }
+}
+
 // Event listeners
 function attachEventListeners() {
+    // Password form
+    passwordForm.addEventListener('submit', handlePasswordSubmit);
+    
+    // Logout button
+    logoutBtn.addEventListener('click', () => {
+        handleLogout();
+        // Close mobile menu if open
+        const mobileMenu = document.getElementById('mobileMenu');
+        if (mobileMenu) mobileMenu.classList.remove('active');
+    });
+    
     rerollAllBtn.addEventListener('click', () => {
         rollAllInitiative();
         saveToFirebase();
