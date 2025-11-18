@@ -276,30 +276,42 @@ async function init() {
     
     // Check if user has valid app password token BEFORE waiting for Firebase
     if (checkAuth()) {
+        console.log('✅ Valid auth token found, attempting Firebase authentication...');
         await waitForFirebase();
         // They have app token, try to authenticate with Firebase
         try {
             // Check if already signed in to Firebase
             if (window.firebaseAuth.currentUser) {
-                console.log('Already signed in to Firebase:', window.firebaseAuth.currentUser.uid);
+                console.log('✅ Already signed in to Firebase:', window.firebaseAuth.currentUser.uid);
                 isAuthenticated = true;
                 await initializeApp();
             } else {
+                console.log('🔄 Signing in to Firebase anonymously...');
                 // Not signed in, do anonymous sign in
-                await window.firebaseSignInAnonymously(window.firebaseAuth);
+                const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
+                console.log('✅ Firebase sign-in successful:', userCredential.user.uid);
                 isAuthenticated = true;
                 await initializeApp();
             }
         } catch (error) {
-            console.error('Re-authentication failed:', error);
-            // Only clear token if it's a real auth error, not just already signed in
+            console.error('❌ Re-authentication failed:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            // Only clear token and show modal for real auth failures
             if (error.code !== 'auth/user-already-exists') {
+                console.log('Clearing invalid auth tokens');
                 localStorage.removeItem('dndAuthToken');
                 localStorage.removeItem('dndAuthExpiry');
+                showPasswordModal();
+            } else {
+                // User already exists error - still authenticated
+                console.log('✅ User already exists in Firebase, continuing...');
+                isAuthenticated = true;
+                await initializeApp();
             }
-            showPasswordModal();
         }
     } else {
+        console.log('❌ No valid auth token found, showing password modal');
         // No authentication, wait for Firebase then show password modal
         await waitForFirebase();
         showPasswordModal();
