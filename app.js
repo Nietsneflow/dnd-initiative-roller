@@ -248,6 +248,14 @@ async function initializeApp() {
 
 // Main init function (checks auth first)
 async function init() {
+    // Attach password modal event listeners immediately (before Firebase is ready)
+    passwordForm.addEventListener('submit', handlePasswordSubmit);
+    
+    // Toggle password visibility
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+    }
+    
     await waitForFirebase();
     
     // Check if user has valid app password token
@@ -278,13 +286,7 @@ async function init() {
 
 // Event listeners
 function attachEventListeners() {
-    // Password form
-    passwordForm.addEventListener('submit', handlePasswordSubmit);
-    
-    // Toggle password visibility
-    if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
-    }
+    // Note: Password form listeners are now attached in init() before Firebase loads
     
     // Logout button
     logoutBtn.addEventListener('click', () => {
