@@ -659,10 +659,25 @@ function updateRoundDisplay() {
 function saveToFirebase() {
     if (!isFirebaseReady || isUpdatingFromFirebase) return;
     
+    // Convert undefined to null for Firebase compatibility
+    const cleanData = (obj) => {
+        if (obj === undefined) return null;
+        if (obj === null) return null;
+        if (Array.isArray(obj)) return obj.map(cleanData);
+        if (typeof obj === 'object') {
+            const cleaned = {};
+            for (const key in obj) {
+                cleaned[key] = cleanData(obj[key]);
+            }
+            return cleaned;
+        }
+        return obj;
+    };
+    
     const data = {
-        combatants: combatants,
+        combatants: cleanData(combatants),
         currentRound: currentRound,
-        initiativeHistory: initiativeHistory,
+        initiativeHistory: cleanData(initiativeHistory),
         theme: currentTheme,
         lastUpdated: Date.now()
     };
