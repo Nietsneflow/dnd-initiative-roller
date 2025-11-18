@@ -26,7 +26,6 @@
                 <button id="manageCampaignsBtn" class="btn btn-secondary menu-item">🎮 Manage Campaigns</button>
                 <button id="managePartyBtn" class="btn btn-secondary menu-item">👥 Manage Party</button>
                 <button id="viewHistory" class="btn btn-secondary menu-item">📜 History</button>
-                <button id="logoutBtn" class="btn btn-danger menu-item">🔓 Logout</button>
                 <div class="theme-toggle-menu">
                     <span class="theme-label">Theme:</span>
                     <button id="lightTheme" class="theme-btn">☀️</button>
@@ -70,33 +69,6 @@
         <div class="actions">
             <button id="clearAll" class="btn btn-danger">Clear Enemies</button>
             <button id="resetRound" class="btn btn-secondary">Reset to Round 1</button>
-        </div>
-    </div>
-
-    <!-- Password Modal -->
-    <div id="passwordModal" class="modal modal-no-close" style="display: flex;">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>🔒 Authentication Required</h2>
-            </div>
-            <div class="modal-body">
-                <form id="passwordForm">
-                    <div class="form-group">
-                        <label for="passwordInput">Enter Password:</label>
-                        <input type="password" id="passwordInput" placeholder="Password" required autofocus>
-                    </div>
-                    <div class="form-group remember-me">
-                        <label>
-                            <input type="checkbox" id="rememberMe" checked>
-                            <span>Remember me on this device</span>
-                        </label>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Unlock</button>
-                    </div>
-                    <p id="passwordError" class="password-error"></p>
-                </form>
-            </div>
         </div>
     </div>
 
@@ -205,7 +177,6 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDfZqVNgz3bGNi2vaxiw6EpgGMiH9Ieo1Y",
@@ -219,17 +190,13 @@
 
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
-        const auth = getAuth(app);
 
         // Make Firebase available globally
         window.firebaseDB = database;
-        window.firebaseAuth = auth;
         window.firebaseRef = ref;
         window.firebaseSet = set;
         window.firebaseOnValue = onValue;
         window.firebaseUpdate = update;
-        window.firebaseSignInAnonymously = signInAnonymously;
-        window.firebaseOnAuthStateChanged = onAuthStateChanged;
         
         // Signal that Firebase is ready
         window.firebaseReady = true;
