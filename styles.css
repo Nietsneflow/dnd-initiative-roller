@@ -1044,44 +1044,55 @@ body[data-theme="light"] .theme-btn.active {
     .initiative-item {
         flex-direction: row;
         align-items: center;
-        gap: 8px;
-        padding: 12px;
-        font-size: 0.85em;
+        gap: 4px;
+        padding: 8px 10px;
+        font-size: 0.75em;
+        min-height: auto;
     }
     
     .drag-handle {
-        font-size: 1em;
-        margin-right: 5px;
+        font-size: 0.9em;
+        margin-right: 4px;
     }
 
     .initiative-info {
         width: 100%;
         justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
+        flex: 1;
     }
     
     .initiative-roll {
-        font-size: 1.5em;
-        min-width: 50px;
-        padding: 8px;
+        font-size: 1.3em;
+        min-width: 40px;
+        padding: 4px 6px;
+    }
+    
+    .initiative-details {
+        flex: 1;
+        min-width: 0;
     }
     
     .combatant-name {
-        font-size: 1em;
+        font-size: 0.95em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .combatant-modifier {
-        font-size: 0.85em;
+        font-size: 0.75em;
     }
     
     .combatant-type {
-        font-size: 0.7em;
-        padding: 4px 8px;
+        font-size: 0.65em;
+        padding: 3px 6px;
+        white-space: nowrap;
     }
     
     .moved-indicator {
-        font-size: 1em;
-        padding: 2px 4px;
+        font-size: 0.9em;
+        padding: 2px 3px;
     }
 
     .actions {
