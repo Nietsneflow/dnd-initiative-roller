@@ -37,6 +37,11 @@ function waitForFirebase() {
 
 // Initialize app
 async function init() {
+    // Load device-specific theme BEFORE Firebase loads
+    const savedTheme = localStorage.getItem('dndTheme') || 'dark';
+    currentTheme = savedTheme;
+    setTheme(currentTheme);
+    
     await waitForFirebase();
     await loadFromFirebase(); // Wait for initial data load
     
@@ -51,8 +56,6 @@ async function init() {
         initiativeHistory = [];
         saveToFirebase();
     }
-    
-    setTheme(currentTheme);
     attachEventListeners();
 }
 
@@ -758,10 +761,7 @@ function loadFromFirebase() {
                 
                 currentRound = data.currentRound || 1;
                 
-                // Load theme from localStorage (device-specific)
-                const savedTheme = localStorage.getItem('dndTheme') || 'dark';
-                currentTheme = savedTheme;
-                setTheme(currentTheme);
+                // Don't change theme on Firebase updates - it's device-specific
                 renderCombatantLists();
                 renderInitiativeOrder();
                 updateRoundDisplay();
