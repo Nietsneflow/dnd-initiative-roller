@@ -7,10 +7,6 @@ let isFirebaseReady = false;
 let isUpdatingFromFirebase = false; // Prevent feedback loops
 let currentCampaignId = null; // Current active campaign
 let campaigns = {}; // List of all campaigns {id: {name, lastUpdated}}
-let isAuthenticated = false; // Authentication state
-
-// Password configuration - CHANGE THIS TO YOUR PASSWORD
-const APP_PASSWORD = 'dnd2025'; // Change this to your desired password
 
 // DOM elements
 const rerollAllBtn = document.getElementById('rerollAll');
@@ -30,127 +26,6 @@ const partyListDiv = document.getElementById('partyList');
 const enemyListDiv = document.getElementById('enemyList');
 const friendlyListDiv = document.getElementById('friendlyList');
 const roundNumberSpan = document.getElementById('roundNumber');
-const passwordForm = document.getElementById('passwordForm');
-const passwordInput = document.getElementById('passwordInput');
-const passwordError = document.getElementById('passwordError');
-const rememberMeCheckbox = document.getElementById('rememberMe');
-const logoutBtn = document.getElementById('logoutBtn');
-
-// Check authentication on page load
-function checkAuth() {
-    const authToken = localStorage.getItem('dndAuthToken');
-    const authExpiry = localStorage.getItem('dndAuthExpiry');
-    
-    if (authToken && authExpiry) {
-        const now = Date.now();
-        if (now < parseInt(authExpiry)) {
-            // Token is still valid
-            isAuthenticated = true;
-            return true;
-        } else {
-            // Token expired
-            localStorage.removeItem('dndAuthToken');
-            localStorage.removeItem('dndAuthExpiry');
-        }
-    }
-    
-    return false;
-}
-
-// Show/hide password modal
-function showPasswordModal() {
-    const modal = document.getElementById('passwordModal');
-    modal.style.display = 'flex';
-    passwordInput.focus();
-}
-
-function hidePasswordModal() {
-    const modal = document.getElementById('passwordModal');
-    modal.style.display = 'none';
-}
-
-// Handle password submission
-function handlePasswordSubmit(e) {
-    e.preventDefault();
-    
-    const enteredPassword = passwordInput.value;
-    
-    if (enteredPassword === APP_PASSWORD) {
-        // Correct password - authenticate with Firebase
-        authenticateWithFirebase();
-    } else {
-        // Wrong password
-        passwordError.textContent = '❌ Incorrect password. Please try again.';
-        passwordError.classList.add('show');
-        passwordInput.value = '';
-        passwordInput.focus();
-        
-        setTimeout(() => {
-            passwordError.classList.remove('show');
-        }, 3000);
-    }
-}
-
-// Authenticate with Firebase anonymously
-async function authenticateWithFirebase() {
-    try {
-        // Show loading state
-        passwordError.textContent = '🔄 Authenticating...';
-        passwordError.style.background = 'rgba(124, 58, 237, 0.2)';
-        passwordError.style.borderColor = '#7c3aed';
-        passwordError.style.color = '#e0e0e0';
-        passwordError.classList.add('show');
-        
-        // Wait for Firebase to be ready
-        await waitForFirebase();
-        
-        // Sign in anonymously with Firebase
-        await window.firebaseSignInAnonymously(window.firebaseAuth);
-        
-        // Authentication successful
-        isAuthenticated = true;
-        
-        // Save auth token if "Remember Me" is checked
-        if (rememberMeCheckbox.checked) {
-            const authToken = btoa(APP_PASSWORD + Date.now());
-            const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
-            localStorage.setItem('dndAuthToken', authToken);
-            localStorage.setItem('dndAuthExpiry', expiry.toString());
-        }
-        
-        hidePasswordModal();
-        await initializeApp(); // Continue with app initialization
-        
-    } catch (error) {
-        console.error('Firebase authentication error:', error);
-        passwordError.textContent = '❌ Authentication failed. Please try again.';
-        passwordError.style.background = 'rgba(220, 38, 38, 0.2)';
-        passwordError.style.borderColor = '#dc2626';
-        passwordError.style.color = '#fca5a5';
-        passwordError.classList.add('show');
-        passwordInput.value = '';
-        passwordInput.focus();
-        
-        setTimeout(() => {
-            passwordError.classList.remove('show');
-        }, 3000);
-    }
-}
-
-// Handle logout
-function handleLogout() {
-    if (confirm('Are you sure you want to logout?')) {
-        // Sign out from Firebase
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-            window.firebaseAuth.signOut().catch(err => console.error('Sign out error:', err));
-        }
-        
-        localStorage.removeItem('dndAuthToken');
-        localStorage.removeItem('dndAuthExpiry');
-        isAuthenticated = false;
-        location.reload(); // Reload page to show password prompt
-    }
-}
 
 // Wait for Firebase to be ready
 function waitForFirebase() {
@@ -165,8 +40,8 @@ function waitForFirebase() {
     });
 }
 
-// Initialize app (called after authentication)
-async function initializeApp() {
+// Initialize app
+async function init() {
     // Load device-specific theme BEFORE Firebase loads
     const savedTheme = localStorage.getItem('dndTheme') || 'dark';
     currentTheme = savedTheme;
@@ -207,65 +82,8 @@ async function initializeApp() {
     attachEventListeners();
 }
 
-// Main init function (checks auth first)
-async function init() {
-    await waitForFirebase();
-    
-    // Listen for Firebase auth state changes
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-        if (user) {
-            // User is signed in with Firebase
-            console.log('Firebase user authenticated:', user.uid);
-            
-            // Check if they also have app password auth
-            if (checkAuth()) {
-                // Both Firebase and app password authenticated
-                if (!isAuthenticated) {
-                    isAuthenticated = true;
-                    await initializeApp();
-                }
-            } else {
-                // Signed in to Firebase but no app password - sign them out
-                await window.firebaseAuth.signOut();
-                showPasswordModal();
-            }
-        } else {
-            // User is signed out
-            console.log('No Firebase user authenticated');
-            
-            // Check if they have valid app password token
-            if (checkAuth()) {
-                // They have app token, try to re-authenticate with Firebase
-                try {
-                    await window.firebaseSignInAnonymously(window.firebaseAuth);
-                } catch (error) {
-                    console.error('Re-authentication failed:', error);
-                    // Clear invalid token
-                    localStorage.removeItem('dndAuthToken');
-                    localStorage.removeItem('dndAuthExpiry');
-                    showPasswordModal();
-                }
-            } else {
-                // No authentication, show password modal
-                showPasswordModal();
-            }
-        }
-    });
-}
-
 // Event listeners
 function attachEventListeners() {
-    // Password form
-    passwordForm.addEventListener('submit', handlePasswordSubmit);
-    
-    // Logout button
-    logoutBtn.addEventListener('click', () => {
-        handleLogout();
-        // Close mobile menu if open
-        const mobileMenu = document.getElementById('mobileMenu');
-        if (mobileMenu) mobileMenu.classList.remove('active');
-    });
-    
     rerollAllBtn.addEventListener('click', () => {
         rollAllInitiative();
         saveToFirebase();
