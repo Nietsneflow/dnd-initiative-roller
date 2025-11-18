@@ -763,11 +763,9 @@ function saveToFirebase() {
         console.error('Error saving to Firebase:', error);
     });
     
-    // Update campaign metadata
-    const metaRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/meta`);
-    window.firebaseSet(metaRef, {
-        lastUpdated: Date.now()
-    }).catch(error => {
+    // Update campaign metadata lastUpdated timestamp only (preserve name)
+    const metaRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/meta/lastUpdated`);
+    window.firebaseSet(metaRef, Date.now()).catch(error => {
         console.error('Error updating campaign metadata:', error);
     });
 }
