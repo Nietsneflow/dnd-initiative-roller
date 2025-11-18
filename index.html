@@ -9,13 +9,21 @@
 <body>
     <div class="container">
         <header>
-            <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
-            <h1>🎲 Initiative Roller <span class="round-badge">Round <span id="roundNumber">1</span></span></h1>
-            <div class="header-controls">
-                <button id="rerollAll" class="btn btn-primary">🎲 Re-roll</button>
-                <button id="nextRound" class="btn btn-secondary">Next Round</button>
-                <button id="viewHistory" class="btn btn-secondary">📜 History</button>
+            <div class="campaign-selector">
+                <select id="campaignDropdown" class="campaign-dropdown">
+                    <option value="">Loading campaigns...</option>
+                </select>
+                <button id="manageCampaignsBtn" class="btn btn-small btn-secondary">Manage</button>
             </div>
+            <div class="header-center">
+                <h1>🎲 Initiative Roller <span class="round-badge">Round <span id="roundNumber">1</span></span></h1>
+                <div class="header-controls">
+                    <button id="rerollAll" class="btn btn-primary">🎲 Re-roll</button>
+                    <button id="nextRound" class="btn btn-secondary">Next Round</button>
+                    <button id="viewHistory" class="btn btn-secondary">📜 History</button>
+                </div>
+            </div>
+            <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
         </header>
 
         <div class="initiative-list">
@@ -114,6 +122,48 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Management Modal -->
+    <div id="campaignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Campaigns</h2>
+                <button class="modal-close" onclick="closeCampaignModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="campaign-form">
+                    <h3>Create New Campaign</h3>
+                    <form id="createCampaignForm">
+                        <input type="text" id="newCampaignName" placeholder="Campaign Name (e.g., Curse of Strahd)" required>
+                        <button type="submit" class="btn btn-success">Create Campaign</button>
+                    </form>
+                </div>
+                <div class="campaign-list-section">
+                    <h3>Your Campaigns</h3>
+                    <div id="campaignList" class="campaign-list">
+                        <p class="empty-state-small">Loading campaigns...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Campaign Modal -->
+    <div id="editCampaignModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Rename Campaign</h2>
+                <button class="modal-close" onclick="closeEditCampaignModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="editCampaignForm">
+                    <input type="hidden" id="editCampaignId">
+                    <input type="text" id="editCampaignName" placeholder="Campaign Name" required>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
             </div>
         </div>
     </div>

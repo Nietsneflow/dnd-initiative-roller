@@ -5,6 +5,8 @@ let initiativeHistory = [];
 let currentTheme = 'dark'; // default theme
 let isFirebaseReady = false;
 let isUpdatingFromFirebase = false; // Prevent feedback loops
+let currentCampaignId = null; // Current active campaign
+let campaigns = {}; // List of all campaigns {id: {name, lastUpdated}}
 
 // DOM elements
 const rerollAllBtn = document.getElementById('rerollAll');
@@ -13,6 +15,10 @@ const resetRoundBtn = document.getElementById('resetRound');
 const clearAllBtn = document.getElementById('clearAll');
 const viewHistoryBtn = document.getElementById('viewHistory');
 const settingsBtn = document.getElementById('settingsBtn');
+const manageCampaignsBtn = document.getElementById('manageCampaignsBtn');
+const campaignDropdown = document.getElementById('campaignDropdown');
+const createCampaignForm = document.getElementById('createCampaignForm');
+const editCampaignForm = document.getElementById('editCampaignForm');
 const lightThemeBtn = document.getElementById('lightTheme');
 const darkThemeBtn = document.getElementById('darkTheme');
 const addCombatantForm = document.getElementById('addCombatantForm');
@@ -43,6 +49,24 @@ async function init() {
     setTheme(currentTheme);
     
     await waitForFirebase();
+    
+    // Load all campaigns
+    await loadCampaignList();
+    
+    // Get last used campaign or create default
+    const lastCampaignId = localStorage.getItem('lastCampaignId');
+    if (lastCampaignId && campaigns[lastCampaignId]) {
+        currentCampaignId = lastCampaignId;
+    } else if (Object.keys(campaigns).length > 0) {
+        // Use first available campaign
+        currentCampaignId = Object.keys(campaigns)[0];
+    } else {
+        // Create default campaign
+        await createCampaign('Default Campaign');
+    }
+    
+    // Update dropdown and load campaign data
+    updateCampaignDropdown();
     await loadFromFirebase(); // Wait for initial data load
     
     // One-time cleanup: clear history if it has any undefined values
@@ -97,6 +121,36 @@ function attachEventListeners() {
 
     settingsBtn.addEventListener('click', () => {
         showSettingsModal();
+    });
+
+    manageCampaignsBtn.addEventListener('click', () => {
+        showCampaignModal();
+    });
+
+    campaignDropdown.addEventListener('change', (e) => {
+        const selectedCampaignId = e.target.value;
+        if (selectedCampaignId && selectedCampaignId !== currentCampaignId) {
+            switchCampaign(selectedCampaignId);
+        }
+    });
+
+    createCampaignForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById('newCampaignName');
+        const campaignName = nameInput.value.trim();
+        if (campaignName) {
+            createCampaign(campaignName);
+            nameInput.value = '';
+        }
+    });
+
+    editCampaignForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const campaignId = document.getElementById('editCampaignId').value;
+        const newName = document.getElementById('editCampaignName').value.trim();
+        if (newName && campaignId) {
+            renameCampaign(campaignId, newName);
+        }
     });
 
     lightThemeBtn.addEventListener('click', () => {
@@ -673,7 +727,7 @@ function updateRoundDisplay() {
 
 // Firebase functions
 function saveToFirebase() {
-    if (!isFirebaseReady || isUpdatingFromFirebase) return;
+    if (!isFirebaseReady || isUpdatingFromFirebase || !currentCampaignId) return;
     
     // Convert undefined to null for Firebase compatibility - DEEP cleaning
     const cleanData = (obj) => {
@@ -703,15 +757,30 @@ function saveToFirebase() {
         lastUpdated: Date.now()
     };
     
-    const dbRef = window.firebaseRef(window.firebaseDB, 'gameState');
+    // Save to campaign-specific path
+    const dbRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/data`);
     window.firebaseSet(dbRef, data).catch(error => {
         console.error('Error saving to Firebase:', error);
+    });
+    
+    // Update campaign metadata
+    const metaRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/meta`);
+    window.firebaseSet(metaRef, {
+        lastUpdated: Date.now()
+    }).catch(error => {
+        console.error('Error updating campaign metadata:', error);
     });
 }
 
 function loadFromFirebase() {
     return new Promise((resolve) => {
-        const dbRef = window.firebaseRef(window.firebaseDB, 'gameState');
+        if (!currentCampaignId) {
+            console.log('No campaign selected');
+            resolve();
+            return;
+        }
+        
+        const dbRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/data`);
         
         // Listen for real-time updates
         let firstLoad = true;
@@ -847,6 +916,211 @@ function updateThemeButtons() {
         darkThemeBtn.classList.add('active');
         lightThemeBtn.classList.remove('active');
     }
+}
+
+// Campaign management
+async function loadCampaignList() {
+    return new Promise((resolve) => {
+        const campaignsRef = window.firebaseRef(window.firebaseDB, 'campaigns');
+        window.firebaseOnValue(campaignsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Build a fresh campaigns object from Firebase data
+                const newCampaigns = {};
+                Object.keys(data).forEach(id => {
+                    if (data[id].meta && data[id].meta.name) {
+                        newCampaigns[id] = {
+                            name: data[id].meta.name,
+                            lastUpdated: data[id].meta.lastUpdated || 0
+                        };
+                    }
+                });
+                campaigns = newCampaigns;
+            } else {
+                campaigns = {};
+            }
+            updateCampaignDropdown();
+            renderCampaignList();
+            resolve();
+        }, { onlyOnce: false });
+    });
+}
+
+function updateCampaignDropdown() {
+    const dropdown = document.getElementById('campaignDropdown');
+    const campaignIds = Object.keys(campaigns);
+    
+    if (campaignIds.length === 0) {
+        dropdown.innerHTML = '<option value="">No campaigns</option>';
+        return;
+    }
+    
+    // Sort by last updated
+    const sorted = campaignIds.sort((a, b) => 
+        (campaigns[b].lastUpdated || 0) - (campaigns[a].lastUpdated || 0)
+    );
+    
+    dropdown.innerHTML = sorted.map(id => 
+        `<option value="${id}" ${id === currentCampaignId ? 'selected' : ''}>${campaigns[id].name}</option>`
+    ).join('');
+}
+
+function switchCampaign(campaignId) {
+    if (campaignId === currentCampaignId) return;
+    
+    currentCampaignId = campaignId;
+    localStorage.setItem('lastCampaignId', campaignId);
+    
+    // Clear current data
+    combatants = [];
+    currentRound = 1;
+    initiativeHistory = [];
+    
+    // Load new campaign data
+    loadFromFirebase();
+    
+    updateCampaignDropdown();
+    renderCampaignList(); // Update the campaign list to reflect active campaign
+}
+
+async function createCampaign(name) {
+    // Generate consistent campaign ID
+    const campaignId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    
+    // Check if campaign already exists
+    if (campaigns[campaignId]) {
+        console.log(`Campaign ${campaignId} already exists`);
+        switchCampaign(campaignId);
+        return;
+    }
+    
+    // Create campaign metadata
+    const metaRef = window.firebaseRef(window.firebaseDB, `campaigns/${campaignId}/meta`);
+    await window.firebaseSet(metaRef, {
+        name: name,
+        lastUpdated: Date.now()
+    });
+    
+    // Create empty data
+    const dataRef = window.firebaseRef(window.firebaseDB, `campaigns/${campaignId}/data`);
+    await window.firebaseSet(dataRef, {
+        combatants: [],
+        currentRound: 1,
+        initiativeHistory: [],
+        lastUpdated: Date.now()
+    });
+    
+    // Add to local campaigns object
+    campaigns[campaignId] = {
+        name: name,
+        lastUpdated: Date.now()
+    };
+    
+    // Switch to new campaign and update UI
+    switchCampaign(campaignId);
+    renderCampaignList(); // Update the campaign list to show new campaign
+}
+
+async function deleteCampaign(campaignId) {
+    if (Object.keys(campaigns).length <= 1) {
+        alert('Cannot delete the last campaign');
+        return;
+    }
+    
+    // Remove from local campaigns object first
+    delete campaigns[campaignId];
+    
+    // Delete from Firebase
+    const campaignRef = window.firebaseRef(window.firebaseDB, `campaigns/${campaignId}`);
+    await window.firebaseSet(campaignRef, null);
+    
+    // If we deleted the current campaign, switch to another
+    if (campaignId === currentCampaignId) {
+        const remaining = Object.keys(campaigns);
+        if (remaining.length > 0) {
+            switchCampaign(remaining[0]);
+        }
+    }
+    
+    // Update UI
+    updateCampaignDropdown();
+    renderCampaignList();
+}
+
+async function renameCampaign(campaignId, newName) {
+    // Update metadata
+    const metaRef = window.firebaseRef(window.firebaseDB, `campaigns/${campaignId}/meta`);
+    await window.firebaseSet(metaRef, {
+        name: newName,
+        lastUpdated: Date.now()
+    });
+    
+    // Update local campaigns object
+    campaigns[campaignId].name = newName;
+    
+    // Refresh UI
+    updateCampaignDropdown();
+    renderCampaignList();
+    closeEditCampaignModal();
+}
+
+function showCampaignModal() {
+    const modal = document.getElementById('campaignModal');
+    renderCampaignList();
+    modal.style.display = 'flex';
+}
+
+function closeCampaignModal() {
+    const modal = document.getElementById('campaignModal');
+    modal.style.display = 'none';
+}
+
+function showEditCampaignModal(campaignId, currentName) {
+    const modal = document.getElementById('editCampaignModal');
+    document.getElementById('editCampaignId').value = campaignId;
+    document.getElementById('editCampaignName').value = currentName;
+    modal.style.display = 'flex';
+}
+
+function closeEditCampaignModal() {
+    const modal = document.getElementById('editCampaignModal');
+    modal.style.display = 'none';
+}
+
+function renderCampaignList() {
+    const listDiv = document.getElementById('campaignList');
+    if (!listDiv) return; // Modal not in DOM yet
+    
+    const campaignIds = Object.keys(campaigns);
+    
+    if (campaignIds.length === 0) {
+        listDiv.innerHTML = '<p class="empty-state-small">No campaigns yet. Create one above!</p>';
+        return;
+    }
+    
+    // Sort by last updated
+    const sorted = campaignIds.sort((a, b) => 
+        (campaigns[b].lastUpdated || 0) - (campaigns[a].lastUpdated || 0)
+    );
+    
+    listDiv.innerHTML = sorted.map(id => {
+        const isActive = id === currentCampaignId;
+        const lastUpdated = new Date(campaigns[id].lastUpdated || 0).toLocaleString();
+        return `
+            <div class="campaign-item ${isActive ? 'active' : ''}">
+                <div class="campaign-info">
+                    <strong>${campaigns[id].name}</strong>
+                    ${isActive ? '<span class="badge">Active</span>' : ''}
+                    <small>Last updated: ${lastUpdated}</small>
+                </div>
+                <div class="campaign-actions">
+                    ${!isActive ? `<button class="btn btn-small btn-primary" onclick="switchCampaign('${id}')">Switch</button>` : ''}
+                    <button class="btn btn-small btn-secondary" onclick="showEditCampaignModal('${id}', '${campaigns[id].name.replace(/'/g, "\\'")}')">Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="if(confirm('Delete ${campaigns[id].name}?')) deleteCampaign('${id}')">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Show history modal
