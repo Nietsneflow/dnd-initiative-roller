@@ -156,7 +156,7 @@ function handleLogout() {
 function waitForFirebase() {
     return new Promise((resolve) => {
         const checkFirebase = setInterval(() => {
-            if (window.firebaseDB) {
+            if (window.firebaseDB && window.firebaseAuth && window.firebaseSignInAnonymously) {
                 clearInterval(checkFirebase);
                 isFirebaseReady = true;
                 resolve();
@@ -211,46 +211,30 @@ async function initializeApp() {
 async function init() {
     await waitForFirebase();
     
-    // Listen for Firebase auth state changes
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-        if (user) {
-            // User is signed in with Firebase
-            console.log('Firebase user authenticated:', user.uid);
-            
-            // Check if they also have app password auth
-            if (checkAuth()) {
-                // Both Firebase and app password authenticated
-                if (!isAuthenticated) {
-                    isAuthenticated = true;
-                    await initializeApp();
-                }
+    // Check if user has valid app password token
+    if (checkAuth()) {
+        // They have app token, try to authenticate with Firebase
+        try {
+            await window.firebaseSignInAnonymously(window.firebaseAuth);
+            isAuthenticated = true;
+            await initializeApp();
+        } catch (error) {
+            // If already signed in, that's fine
+            if (error.code === 'auth/user-already-exists' || window.firebaseAuth.currentUser) {
+                isAuthenticated = true;
+                await initializeApp();
             } else {
-                // Signed in to Firebase but no app password - sign them out
-                await window.firebaseAuth.signOut();
-                showPasswordModal();
-            }
-        } else {
-            // User is signed out
-            console.log('No Firebase user authenticated');
-            
-            // Check if they have valid app password token
-            if (checkAuth()) {
-                // They have app token, try to re-authenticate with Firebase
-                try {
-                    await window.firebaseSignInAnonymously(window.firebaseAuth);
-                } catch (error) {
-                    console.error('Re-authentication failed:', error);
-                    // Clear invalid token
-                    localStorage.removeItem('dndAuthToken');
-                    localStorage.removeItem('dndAuthExpiry');
-                    showPasswordModal();
-                }
-            } else {
-                // No authentication, show password modal
+                console.error('Re-authentication failed:', error);
+                // Clear invalid token
+                localStorage.removeItem('dndAuthToken');
+                localStorage.removeItem('dndAuthExpiry');
                 showPasswordModal();
             }
         }
-    });
+    } else {
+        // No authentication, show password modal
+        showPasswordModal();
+    }
 }
 
 // Event listeners
