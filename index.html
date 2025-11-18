@@ -83,7 +83,12 @@
                 <form id="passwordForm">
                     <div class="form-group">
                         <label for="passwordInput">Enter Password:</label>
-                        <input type="password" id="passwordInput" placeholder="Password" required autofocus>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="passwordInput" placeholder="Password" required autofocus>
+                            <button type="button" id="togglePasswordBtn" class="toggle-password-btn" title="Show password">
+                                👁️
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group remember-me">
                         <label>
