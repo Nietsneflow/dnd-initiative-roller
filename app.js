@@ -8,6 +8,7 @@ let isUpdatingFromFirebase = false; // Prevent feedback loops
 let currentCampaignId = null; // Current active campaign
 let campaigns = {}; // List of all campaigns {id: {name, lastUpdated}}
 let isAuthenticated = false; // Authentication state
+let wakeLock = null; // Screen Wake Lock
 
 // Password configuration - CHANGE THIS TO YOUR PASSWORD
 const APP_PASSWORD = 'dnd2025'; // Change this to your desired password
@@ -49,6 +50,44 @@ function togglePasswordVisibility() {
         togglePasswordBtn.title = 'Show password';
     }
 }
+
+// Screen Wake Lock - Prevent screen from sleeping
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock activated');
+            
+            // Re-request wake lock when visibility changes (e.g., user switches tabs and comes back)
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock released');
+            });
+        } else {
+            console.log('Wake Lock API not supported');
+        }
+    } catch (err) {
+        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+    }
+}
+
+async function releaseWakeLock() {
+    if (wakeLock !== null) {
+        try {
+            await wakeLock.release();
+            wakeLock = null;
+            console.log('Wake Lock released manually');
+        } catch (err) {
+            console.error(`Wake Lock release error: ${err.name}, ${err.message}`);
+        }
+    }
+}
+
+// Re-request wake lock when page becomes visible again
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && isAuthenticated) {
+        await requestWakeLock();
+    }
+});
 
 // Check authentication on page load
 function checkAuth() {
@@ -149,6 +188,9 @@ async function authenticateWithFirebase() {
         await initializeApp(); // Continue with app initialization
         console.log('App initialized!');
         
+        // Request wake lock to prevent screen from sleeping
+        await requestWakeLock();
+        
     } catch (error) {
         console.error('Firebase authentication error:', error);
         console.error('Error code:', error.code);
@@ -179,6 +221,9 @@ async function authenticateWithFirebase() {
 // Handle logout
 function handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Release wake lock
+        releaseWakeLock();
+        
         // Sign out from Firebase
         if (window.firebaseAuth && window.firebaseAuth.currentUser) {
             window.firebaseAuth.signOut().catch(err => console.error('Sign out error:', err));
@@ -439,6 +484,25 @@ function attachEventListeners() {
             savePartyMember();
         });
     }
+    
+    // Listen for window resize and orientation changes to recalculate initiative order sizing
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (combatants.length > 0) {
+                adjustInitiativeOrderSize();
+            }
+        }, 250);
+    });
+    
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            if (combatants.length > 0) {
+                adjustInitiativeOrderSize();
+            }
+        }, 300);
+    });
 }
 
 // Add a new combatant (enemy)
@@ -736,6 +800,9 @@ function adjustInitiativeOrderSize() {
     // Get container height
     const containerHeight = container.clientHeight;
     
+    // Detect if we're in landscape mode on mobile (extreme height constraint)
+    const isLandscapeMobile = window.innerHeight < 500 && window.innerWidth > window.innerHeight;
+    
     // Start with default gap
     let gapSize = 12;
     let modeClass = '';
@@ -745,22 +812,36 @@ function adjustInitiativeOrderSize() {
         return (itemCount * itemHeight) + ((itemCount - 1) * gap);
     };
     
-    // Try different compression levels
-    if (estimateHeightNeeded(12, 80) <= containerHeight) {
-        // Normal mode fits
-        gapSize = 12;
-    } else if (estimateHeightNeeded(10, 60) <= containerHeight) {
-        // Compact mode
-        modeClass = 'compact';
-        gapSize = 10;
-    } else if (estimateHeightNeeded(8, 50) <= containerHeight) {
-        // Very compact mode
-        modeClass = 'very-compact';
-        gapSize = 8;
+    // In landscape mode, be more aggressive with compression
+    if (isLandscapeMobile) {
+        if (estimateHeightNeeded(6, 40) <= containerHeight) {
+            modeClass = 'compact';
+            gapSize = 6;
+        } else if (estimateHeightNeeded(4, 35) <= containerHeight) {
+            modeClass = 'very-compact';
+            gapSize = 4;
+        } else {
+            modeClass = 'ultra-compact';
+            gapSize = 3;
+        }
     } else {
-        // Ultra compact mode - must fit!
-        modeClass = 'ultra-compact';
-        gapSize = 4;
+        // Normal mode detection
+        if (estimateHeightNeeded(12, 80) <= containerHeight) {
+            // Normal mode fits
+            gapSize = 12;
+        } else if (estimateHeightNeeded(10, 60) <= containerHeight) {
+            // Compact mode
+            modeClass = 'compact';
+            gapSize = 10;
+        } else if (estimateHeightNeeded(8, 50) <= containerHeight) {
+            // Very compact mode
+            modeClass = 'very-compact';
+            gapSize = 8;
+        } else {
+            // Ultra compact mode - must fit!
+            modeClass = 'ultra-compact';
+            gapSize = 4;
+        }
     }
     
     if (modeClass) {
@@ -771,9 +852,10 @@ function adjustInitiativeOrderSize() {
     const totalGapHeight = (itemCount - 1) * gapSize;
     const availableHeightPerItem = (containerHeight - totalGapHeight) / itemCount;
     
-    // Set dynamic height
+    // Set dynamic height with lower minimum for landscape
+    const minHeight = isLandscapeMobile ? 25 : 30;
     if (availableHeightPerItem < 80) {
-        container.style.setProperty('--item-height', `${Math.max(availableHeightPerItem, 30)}px`);
+        container.style.setProperty('--item-height', `${Math.max(availableHeightPerItem, minHeight)}px`);
     } else {
         container.style.setProperty('--item-height', 'auto');
     }
