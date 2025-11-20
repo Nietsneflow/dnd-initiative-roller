@@ -4,6 +4,29 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100vh;
+}
+
+/* Custom scrollbar styling */
+.order-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.order-container::-webkit-scrollbar-track {
+    background: #1e1e2e;
+    border-radius: 4px;
+}
+
+.order-container::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 4px;
+}
+
+.order-container::-webkit-scrollbar-thumb:hover {
+    background: #7c3aed;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -17,12 +40,12 @@ body {
     margin: 0 auto;
     background: #1e1e2e;
     border-radius: 16px;
-    padding: 30px;
+    padding: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 header {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     padding-bottom: 15px;
     border-bottom: 3px solid #4a5568;
     position: relative;
@@ -253,12 +276,14 @@ h1 {
 }
 
 .initiative-list {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 .initiative-list h2 {
     color: #7c3aed;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     font-size: 1.8em;
     text-align: center;
 }
@@ -267,6 +292,126 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    padding-right: 5px;
+    max-height: calc(100vh - 280px);
+    min-height: 200px;
+    --item-height: auto;
+}
+
+.initiative-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #2d2d3d 0%, #3a3a4a 100%);
+    border-radius: 12px;
+    border-left: 6px solid #7c3aed;
+    transition: all 0.3s ease;
+    cursor: move;
+    position: relative;
+    min-height: var(--item-height);
+    max-height: var(--item-height);
+    overflow: hidden;
+}
+.order-container.compact {
+    gap: 10px;
+}
+
+.order-container.compact .initiative-item {
+    padding: 12px;
+}
+
+.order-container.compact .initiative-roll {
+    font-size: 1.5em;
+    min-width: 50px;
+    padding: 6px;
+}
+
+.order-container.compact .combatant-name {
+    font-size: 1.1em;
+}
+
+.order-container.compact .combatant-modifier {
+    font-size: 0.8em;
+}
+
+.order-container.compact .drag-handle {
+    font-size: 1em;
+}
+
+.order-container.very-compact .initiative-item {
+    padding: 8px;
+}
+
+.order-container.very-compact {
+    gap: 8px;
+}
+
+.order-container.very-compact .initiative-roll {
+    font-size: 1.3em;
+    min-width: 45px;
+    padding: 4px;
+}
+
+.order-container.very-compact .combatant-name {
+    font-size: 1em;
+}
+
+.order-container.very-compact .combatant-modifier {
+    font-size: 0.75em;
+}
+
+.order-container.very-compact .combatant-type {
+    font-size: 0.7em;
+    padding: 3px 8px;
+}
+
+.order-container.very-compact .drag-handle {
+    font-size: 0.9em;
+    margin-right: 6px;
+}
+
+.order-container.very-compact .initiative-info {
+    gap: 12px;
+}
+
+/* Ultra compact for very large lists */
+.order-container.ultra-compact {
+    gap: 4px;
+}
+
+.order-container.ultra-compact .initiative-item {
+    padding: 4px 8px;
+}
+
+.order-container.ultra-compact .initiative-roll {
+    font-size: 1.2em;
+    min-width: 40px;
+    padding: 3px;
+}
+
+.order-container.ultra-compact .combatant-name {
+    font-size: 0.95em;
+}
+
+.order-container.ultra-compact .combatant-modifier {
+    font-size: 0.7em;
+}
+
+.order-container.ultra-compact .combatant-type {
+    font-size: 0.65em;
+    padding: 2px 6px;
+}
+
+.order-container.ultra-compact .drag-handle {
+    font-size: 0.85em;
+    margin-right: 4px;
+}
+
+.order-container.ultra-compact .initiative-info {
+    gap: 10px;
 }
 
 .initiative-item {
@@ -417,9 +562,9 @@ h1 {
 
 .add-combatant {
     background: #2d2d3d;
-    padding: 25px;
+    padding: 20px;
     border-radius: 12px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .add-combatant h3 {
@@ -496,7 +641,7 @@ h1 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .combatants-section-full {
@@ -1593,8 +1738,16 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
     .container {
-        padding: 20px;
+        padding: 15px;
+    }
+
+    .order-container {
+        max-height: calc(100vh - 320px);
     }
 
     header {

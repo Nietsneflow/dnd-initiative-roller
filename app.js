@@ -718,6 +718,68 @@ function renderInitiativeOrder() {
     
     // Attach drag and drop event listeners
     attachDragListeners();
+    
+    // Apply dynamic sizing based on number of items
+    adjustInitiativeOrderSize();
+}
+
+// Adjust initiative order size to fit all items without scrolling
+function adjustInitiativeOrderSize() {
+    const container = initiativeOrderDiv;
+    const itemCount = combatants.length;
+    
+    if (itemCount === 0) return;
+    
+    // Remove existing classes
+    container.classList.remove('compact', 'very-compact', 'ultra-compact');
+    
+    // Get container height
+    const containerHeight = container.clientHeight;
+    
+    // Start with default gap
+    let gapSize = 12;
+    let modeClass = '';
+    
+    // Calculate what we need
+    const estimateHeightNeeded = (gap, itemHeight) => {
+        return (itemCount * itemHeight) + ((itemCount - 1) * gap);
+    };
+    
+    // Try different compression levels
+    if (estimateHeightNeeded(12, 80) <= containerHeight) {
+        // Normal mode fits
+        gapSize = 12;
+    } else if (estimateHeightNeeded(10, 60) <= containerHeight) {
+        // Compact mode
+        modeClass = 'compact';
+        gapSize = 10;
+    } else if (estimateHeightNeeded(8, 50) <= containerHeight) {
+        // Very compact mode
+        modeClass = 'very-compact';
+        gapSize = 8;
+    } else {
+        // Ultra compact mode - must fit!
+        modeClass = 'ultra-compact';
+        gapSize = 4;
+    }
+    
+    if (modeClass) {
+        container.classList.add(modeClass);
+    }
+    
+    // Calculate exact height per item
+    const totalGapHeight = (itemCount - 1) * gapSize;
+    const availableHeightPerItem = (containerHeight - totalGapHeight) / itemCount;
+    
+    // Set dynamic height
+    if (availableHeightPerItem < 80) {
+        container.style.setProperty('--item-height', `${Math.max(availableHeightPerItem, 30)}px`);
+    } else {
+        container.style.setProperty('--item-height', 'auto');
+    }
+    
+    // Force disable scrolling
+    container.style.overflowY = 'hidden';
 }
 
 // Render combatant lists (Party, Enemies & Friendlies)
