@@ -46,13 +46,26 @@
             <h3>Add Enemy</h3>
             <form id="addCombatantForm">
                 <div class="form-row">
-                    <input type="text" id="combatantName" placeholder="Name" required>
-                    <input type="number" id="combatantModifier" placeholder="Initiative Modifier" value="0" required>
-                    <select id="combatantAdvantage">
-                        <option value="normal">Normal</option>
-                        <option value="advantage">Advantage</option>
-                        <option value="disadvantage">Disadvantage</option>
-                    </select>
+                    <div class="form-field">
+                        <label for="combatantName">Name</label>
+                        <input type="text" id="combatantName" placeholder="Enemy Name" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="combatantDex">Dexterity</label>
+                        <input type="number" id="combatantDex" placeholder="0" value="0" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="combatantModifier">Modifier</label>
+                        <input type="number" id="combatantModifier" placeholder="0" value="0" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="combatantAdvantage">Roll Type</label>
+                        <select id="combatantAdvantage">
+                            <option value="normal">Normal</option>
+                            <option value="advantage">Advantage</option>
+                            <option value="disadvantage">Disadvantage</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-success">Add</button>
                 </div>
             </form>
@@ -112,23 +125,7 @@
             </div>
             <div class="modal-body">
                 <div class="add-combatant-inline">
-                    <h4>Add Party / Ally</h4>
-                    <form id="addPartyForm">
-                        <div class="form-row">
-                            <input type="text" id="partyCombatantName" placeholder="Name" required>
-                            <input type="number" id="partyCombatantModifier" placeholder="Initiative Modifier" value="0" required>
-                            <select id="partyCombatantType">
-                                <option value="party">Party</option>
-                                <option value="friendly">Ally</option>
-                            </select>
-                            <select id="partyCombatantAdvantage">
-                                <option value="normal">Normal</option>
-                                <option value="advantage">Advantage</option>
-                                <option value="disadvantage">Disadvantage</option>
-                            </select>
-                            <button type="submit" class="btn btn-success">Add</button>
-                        </div>
-                    </form>
+                    <button id="openAddPartyDialogBtn" class="btn btn-success">➕ Add Party / Ally</button>
                 </div>
 
                 <div class="combatants-manager manage-party-modal">
@@ -187,6 +184,52 @@
                     <input type="hidden" id="editCampaignId">
                     <input type="text" id="editCampaignName" placeholder="Campaign Name" required>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Party Member Modal -->
+    <div id="addEditPartyModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="addEditPartyTitle">Add Party / Ally</h2>
+                <button class="modal-close" onclick="closeAddEditPartyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="addEditPartyForm">
+                    <input type="hidden" id="editPartyId">
+                    <div class="form-group">
+                        <label for="partyMemberName">Name:</label>
+                        <input type="text" id="partyMemberName" placeholder="Character Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="partyMemberDex">Dexterity:</label>
+                        <input type="number" id="partyMemberDex" placeholder="e.g., 3" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="partyMemberModifier">Modifier:</label>
+                        <input type="number" id="partyMemberModifier" placeholder="e.g., 4" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="partyMemberType">Type:</label>
+                        <select id="partyMemberType">
+                            <option value="party">Party Member</option>
+                            <option value="friendly">Ally</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="partyMemberAdvantage">Initiative Roll:</label>
+                        <select id="partyMemberAdvantage">
+                            <option value="normal">Normal</option>
+                            <option value="advantage">Advantage</option>
+                            <option value="disadvantage">Disadvantage</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="savePartyMemberBtn">Save</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAddEditPartyModal()">Cancel</button>
+                    </div>
                 </form>
             </div>
         </div>

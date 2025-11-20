@@ -425,20 +425,31 @@ function attachEventListeners() {
         addCombatant();
     });
 
-    const addPartyForm = document.getElementById('addPartyForm');
-    addPartyForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        addPartyCombatant();
-    });
+    const openAddPartyDialogBtn = document.getElementById('openAddPartyDialogBtn');
+    if (openAddPartyDialogBtn) {
+        openAddPartyDialogBtn.addEventListener('click', () => {
+            showAddEditPartyModal();
+        });
+    }
+
+    const addEditPartyForm = document.getElementById('addEditPartyForm');
+    if (addEditPartyForm) {
+        addEditPartyForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            savePartyMember();
+        });
+    }
 }
 
 // Add a new combatant (enemy)
 function addCombatant() {
     const nameInput = document.getElementById('combatantName');
+    const dexInput = document.getElementById('combatantDex');
     const modifierInput = document.getElementById('combatantModifier');
 
     const name = nameInput.value.trim();
-    const modifier = parseInt(modifierInput.value);
+    const dex = parseInt(dexInput.value) || 0;
+    const modifier = parseInt(modifierInput.value) || 0;
     const type = 'enemy'; // Always enemy from main form
 
     if (!name) {
@@ -452,6 +463,7 @@ function addCombatant() {
     const newCombatant = {
         id: Date.now(),
         name: name,
+        dex: dex,
         modifier: modifier,
         type: type,
         advantage: advantage,
@@ -466,51 +478,8 @@ function addCombatant() {
     
     // Clear form
     nameInput.value = '';
+    dexInput.value = '0';
     modifierInput.value = '0';
-    advantageSelect.value = 'normal';
-
-    renderCombatantLists();
-    rollAllInitiative();
-    saveToFirebase();
-}
-
-// Add a new party member or friendly
-function addPartyCombatant() {
-    const nameInput = document.getElementById('partyCombatantName');
-    const modifierInput = document.getElementById('partyCombatantModifier');
-    const typeSelect = document.getElementById('partyCombatantType');
-
-    const name = nameInput.value.trim();
-    const modifier = parseInt(modifierInput.value);
-    const type = typeSelect.value;
-
-    if (!name) {
-        alert('Please enter a name');
-        return;
-    }
-
-    const advantageSelect = document.getElementById('partyCombatantAdvantage');
-    const advantage = advantageSelect.value;
-
-    const newCombatant = {
-        id: Date.now(),
-        name: name,
-        modifier: modifier,
-        type: type,
-        advantage: advantage,
-        initiative: 0,
-        manualOrder: null,
-        wasMoved: false,
-        moveDirection: null,
-        originalIndex: null
-    };
-
-    combatants.push(newCombatant);
-    
-    // Clear form
-    nameInput.value = '';
-    modifierInput.value = '0';
-    typeSelect.value = 'party';
     advantageSelect.value = 'normal';
 
     renderCombatantLists();
@@ -580,7 +549,8 @@ function duplicateCombatant(id) {
     const duplicate = {
         id: Date.now(),
         name: newName,
-        modifier: combatant.modifier,
+        dex: combatant.dex || 0,
+        modifier: combatant.modifier || 0,
         type: combatant.type,
         advantage: combatant.advantage,
         initiative: 0,
@@ -619,8 +589,14 @@ function rollAllInitiative() {
             roll = rollD20();
             combatant.rolls = [roll];
         }
-        combatant.initiative = roll + combatant.modifier;
+        // Calculate initiative bonus (dex + modifier)
+        const dex = combatant.dex || 0;
+        const modifier = combatant.modifier || 0;
+        const initiativeBonus = dex + modifier;
+        
+        combatant.initiative = roll + initiativeBonus;
         combatant.baseRoll = roll;
+        combatant.initiativeBonus = initiativeBonus; // Store for display
         combatant.manualOrder = null; // Reset manual ordering on re-roll
         combatant.wasMoved = false; // Reset moved indicator
         combatant.moveDirection = null; // Reset move direction
@@ -649,7 +625,8 @@ function saveToHistory() {
         combatants: combatants.map(c => ({
             name: c.name,
             type: c.type,
-            modifier: c.modifier,
+            dex: c.dex ?? 0,
+            modifier: c.modifier ?? 0,
             initiative: c.initiative,
             baseRoll: c.baseRoll,
             advantage: c.advantage,
@@ -676,7 +653,7 @@ function renderInitiativeOrder() {
         return;
     }
 
-    // Sort by manual order first, then by initiative (highest first)
+    // Sort by manual order first, then by initiative with tiebreakers
     const sorted = [...combatants].sort((a, b) => {
         // If both have manual order, sort by that
         if (a.manualOrder !== null && b.manualOrder !== null) {
@@ -685,18 +662,38 @@ function renderInitiativeOrder() {
         // If only a has manual order, it goes first (lower manualOrder = earlier)
         if (a.manualOrder !== null) return -1;
         if (b.manualOrder !== null) return 1;
+        
         // Otherwise sort by initiative
-        return b.initiative - a.initiative;
+        if (a.initiative !== b.initiative) {
+            return b.initiative - a.initiative; // Higher initiative goes first
+        }
+        
+        // Tie in initiative - check dex
+        const aDex = a.dex || 0;
+        const bDex = b.dex || 0;
+        if (aDex !== bDex) {
+            return bDex - aDex; // Higher dex goes first
+        }
+        
+        // Still tied - player types go first (party/friendly before enemy)
+        const typeOrder = { party: 0, friendly: 1, enemy: 2 };
+        const aTypeOrder = typeOrder[a.type] ?? 2;
+        const bTypeOrder = typeOrder[b.type] ?? 2;
+        return aTypeOrder - bTypeOrder; // Lower value (player types) go first
     });
 
     initiativeOrderDiv.innerHTML = sorted.map((combatant, index) => {
+        const dex = combatant.dex || 0;
+        const modifier = combatant.modifier || 0;
+        const bonus = dex + modifier;
+        
         let rollDisplay = '';
         if (combatant.advantage === 'advantage') {
-            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (ADV) + ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}`;
+            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (ADV) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
         } else if (combatant.advantage === 'disadvantage') {
-            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (DIS) + ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}`;
+            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (DIS) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
         } else {
-            rollDisplay = `Roll: ${combatant.baseRoll} + ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}`;
+            rollDisplay = `Roll: ${combatant.baseRoll} + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
         }
         
         const movedIndicator = combatant.wasMoved ? 
@@ -737,22 +734,26 @@ function renderCombatantLists() {
             let advantageText = 'Normal';
             let advantageClass = 'adv-normal';
             if (combatant.advantage === 'advantage') {
-                advantageText = 'ADV';
+                advantageText = 'Advantage';
                 advantageClass = 'adv-advantage';
             }
             if (combatant.advantage === 'disadvantage') {
-                advantageText = 'DIS';
+                advantageText = 'Disadvantage';
                 advantageClass = 'adv-disadvantage';
             }
+            
+            const dex = combatant.dex || 0;
+            const modifier = combatant.modifier || 0;
+            const bonus = dex + modifier;
             
             return `
                 <div class="combatant-card party">
                     <div class="combatant-card-info">
                         <span>${combatant.name}</span>
-                        <small>Modifier: ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}</small>
+                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier}) | <span class="${advantageClass}">${advantageText}</span></small>
                     </div>
                     <div class="combatant-actions">
-                        <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
+                        <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
                         <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
                     </div>
                 </div>
@@ -776,11 +777,15 @@ function renderCombatantLists() {
                 advantageClass = 'adv-disadvantage';
             }
             
+            const dex = combatant.dex || 0;
+            const modifier = combatant.modifier || 0;
+            const bonus = dex + modifier;
+            
             return `
                 <div class="combatant-card enemy">
                     <div class="combatant-card-info">
                         <span>${combatant.name}</span>
-                        <small>Modifier: ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}</small>
+                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})</small>
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-copy" onclick="duplicateCombatant(${combatant.id})" title="Duplicate this enemy">Copy</button>
@@ -800,22 +805,26 @@ function renderCombatantLists() {
             let advantageText = 'Normal';
             let advantageClass = 'adv-normal';
             if (combatant.advantage === 'advantage') {
-                advantageText = 'ADV';
+                advantageText = 'Advantage';
                 advantageClass = 'adv-advantage';
             }
             if (combatant.advantage === 'disadvantage') {
-                advantageText = 'DIS';
+                advantageText = 'Disadvantage';
                 advantageClass = 'adv-disadvantage';
             }
+            
+            const dex = combatant.dex || 0;
+            const modifier = combatant.modifier || 0;
+            const bonus = dex + modifier;
             
             return `
                 <div class="combatant-card friendly">
                     <div class="combatant-card-info">
                         <span>${combatant.name}</span>
-                        <small>Modifier: ${combatant.modifier >= 0 ? '+' : ''}${combatant.modifier}</small>
+                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier}) | <span class="${advantageClass}">${advantageText}</span></small>
                     </div>
                     <div class="combatant-actions">
-                        <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
+                        <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
                         <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
                     </div>
                 </div>
@@ -1060,8 +1069,11 @@ function loadFromFirebase() {
                 }
                 
                 // Ensure all properties are null instead of undefined
+                // Add backward compatibility for old data without 'dex' field
                 combatants = loadedCombatants.filter(c => c != null).map(c => ({
                     ...c,
+                    dex: c.dex ?? 0, // Default to 0 for old data
+                    modifier: c.modifier ?? 0, // Default to 0 if missing
                     manualOrder: c.manualOrder ?? null,
                     wasMoved: c.wasMoved ?? false,
                     moveDirection: c.moveDirection ?? null,
@@ -1075,10 +1087,13 @@ function loadFromFirebase() {
                 }
                 
                 // Clean history entries to ensure no undefined values
+                // Add backward compatibility for history entries
                 initiativeHistory = loadedHistory.filter(h => h != null).map(entry => ({
                     ...entry,
                     combatants: entry.combatants ? entry.combatants.map(c => ({
                         ...c,
+                        dex: c.dex ?? 0, // Default to 0 for old data
+                        modifier: c.modifier ?? 0, // Default to 0 if missing
                         manualOrder: c.manualOrder ?? null,
                         wasMoved: c.wasMoved ?? false,
                         moveDirection: c.moveDirection ?? null
@@ -1132,6 +1147,105 @@ function showManagePartyModal() {
 function closeManagePartyModal() {
     const modal = document.getElementById('managePartyModal');
     modal.style.display = 'none';
+}
+
+// Show/hide Add/Edit Party Member modal
+function showAddEditPartyModal(combatantId = null) {
+    const modal = document.getElementById('addEditPartyModal');
+    const title = document.getElementById('addEditPartyTitle');
+    const editIdField = document.getElementById('editPartyId');
+    const nameInput = document.getElementById('partyMemberName');
+    const dexInput = document.getElementById('partyMemberDex');
+    const modifierInput = document.getElementById('partyMemberModifier');
+    const typeSelect = document.getElementById('partyMemberType');
+    const advantageSelect = document.getElementById('partyMemberAdvantage');
+    const saveBtn = document.getElementById('savePartyMemberBtn');
+    
+    if (combatantId) {
+        // Edit mode
+        const combatant = combatants.find(c => c.id === combatantId);
+        if (!combatant) return;
+        
+        title.textContent = 'Edit Party / Ally';
+        editIdField.value = combatantId;
+        nameInput.value = combatant.name;
+        dexInput.value = combatant.dex || 0;
+        modifierInput.value = combatant.modifier || 0;
+        typeSelect.value = combatant.type;
+        advantageSelect.value = combatant.advantage || 'normal';
+        saveBtn.textContent = 'Update';
+    } else {
+        // Add mode
+        title.textContent = 'Add Party / Ally';
+        editIdField.value = '';
+        nameInput.value = '';
+        dexInput.value = '0';
+        modifierInput.value = '0';
+        typeSelect.value = 'party';
+        advantageSelect.value = 'normal';
+        saveBtn.textContent = 'Add';
+    }
+    
+    modal.style.display = 'flex';
+    nameInput.focus();
+}
+
+function closeAddEditPartyModal() {
+    const modal = document.getElementById('addEditPartyModal');
+    modal.style.display = 'none';
+}
+
+// Save party member (add or update)
+function savePartyMember() {
+    const editId = document.getElementById('editPartyId').value;
+    const name = document.getElementById('partyMemberName').value.trim();
+    const dex = parseInt(document.getElementById('partyMemberDex').value) || 0;
+    const modifier = parseInt(document.getElementById('partyMemberModifier').value) || 0;
+    const type = document.getElementById('partyMemberType').value;
+    const advantage = document.getElementById('partyMemberAdvantage').value;
+    
+    if (!name) {
+        alert('Please enter a name');
+        return;
+    }
+    
+    if (editId) {
+        // Update existing combatant
+        const combatant = combatants.find(c => c.id == editId);
+        if (combatant) {
+            combatant.name = name;
+            combatant.dex = dex;
+            combatant.modifier = modifier;
+            combatant.type = type;
+            combatant.advantage = advantage;
+        }
+    } else {
+        // Add new combatant
+        const newCombatant = {
+            id: Date.now(),
+            name: name,
+            dex: dex,
+            modifier: modifier,
+            type: type,
+            advantage: advantage,
+            initiative: 0,
+            manualOrder: null,
+            wasMoved: false,
+            moveDirection: null,
+            originalIndex: null
+        };
+        combatants.push(newCombatant);
+    }
+    
+    renderCombatantLists();
+    rollAllInitiative();
+    saveToFirebase();
+    closeAddEditPartyModal();
+}
+
+// Edit party member
+function editPartyMember(id) {
+    showAddEditPartyModal(id);
 }
 
 // Theme management
@@ -1370,14 +1484,31 @@ function showHistoryModal() {
         const sorted = [...initiativeHistory].reverse();
         
         historyContent.innerHTML = sorted.map(record => {
-            // Sort by manual order if it exists, otherwise by initiative
+            // Sort by manual order if it exists, otherwise by initiative with tiebreakers
             const sortedCombatants = [...record.combatants].sort((a, b) => {
                 if (a.manualOrder !== null && b.manualOrder !== null) {
                     return a.manualOrder - b.manualOrder;
                 }
                 if (a.manualOrder !== null) return -1;
                 if (b.manualOrder !== null) return 1;
-                return b.initiative - a.initiative;
+                
+                // Sort by initiative
+                if (a.initiative !== b.initiative) {
+                    return b.initiative - a.initiative;
+                }
+                
+                // Tie in initiative - check dex
+                const aDex = a.dex || 0;
+                const bDex = b.dex || 0;
+                if (aDex !== bDex) {
+                    return bDex - aDex;
+                }
+                
+                // Still tied - player types go first
+                const typeOrder = { party: 0, friendly: 1, enemy: 2 };
+                const aTypeOrder = typeOrder[a.type] ?? 2;
+                const bTypeOrder = typeOrder[b.type] ?? 2;
+                return aTypeOrder - bTypeOrder;
             });
             
             return `
@@ -1388,13 +1519,17 @@ function showHistoryModal() {
                     </div>
                     <div class="history-initiatives">
                         ${sortedCombatants.map(c => {
+                            const dex = c.dex || 0;
+                            const modifier = c.modifier || 0;
+                            const bonus = dex + modifier;
+                            
                             let rollDisplay = '';
                             if (c.advantage === 'advantage') {
-                                rollDisplay = `Roll: [${c.rolls.join(', ')}] → ${c.baseRoll} (ADV) + ${c.modifier >= 0 ? '+' : ''}${c.modifier}`;
+                                rollDisplay = `Roll: [${c.rolls.join(', ')}] → ${c.baseRoll} (ADV) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
                             } else if (c.advantage === 'disadvantage') {
-                                rollDisplay = `Roll: [${c.rolls.join(', ')}] → ${c.baseRoll} (DIS) + ${c.modifier >= 0 ? '+' : ''}${c.modifier}`;
+                                rollDisplay = `Roll: [${c.rolls.join(', ')}] → ${c.baseRoll} (DIS) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
                             } else {
-                                rollDisplay = `Roll: ${c.baseRoll} + ${c.modifier >= 0 ? '+' : ''}${c.modifier}`;
+                                rollDisplay = `Roll: ${c.baseRoll} + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
                             }
                             
                             // Add move indicator if present
