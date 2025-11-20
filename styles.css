@@ -431,6 +431,21 @@ h1 {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-field label {
+    font-size: 0.75em;
+    color: #b0b0b0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-row input,
@@ -450,19 +465,31 @@ h1 {
     border-color: #7c3aed;
 }
 
-.form-row input[type="text"] {
+.form-field:has(input[type="text"]) {
     flex: 2;
     min-width: 150px;
 }
 
-.form-row input[type="number"] {
+.form-field:has(input[type="number"]) {
     flex: 1;
     min-width: 100px;
 }
 
-.form-row select {
+.form-field:has(select) {
     flex: 1;
     min-width: 120px;
+}
+
+.form-row input[type="text"] {
+    flex: 1;
+}
+
+.form-row input[type="number"] {
+    flex: 1;
+}
+
+.form-row select {
+    flex: 1;
 }
 
 .combatants-manager {
@@ -533,10 +560,42 @@ h1 {
     font-size: 0.85em;
 }
 
+.combatant-card-info small .adv-normal {
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.combatant-card-info small .adv-advantage {
+    color: #34d399;
+    font-weight: 600;
+}
+
+.combatant-card-info small .adv-disadvantage {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
 .combatant-actions {
     display: flex;
     gap: 6px;
     flex-shrink: 0;
+}
+
+.btn-edit {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.btn-edit:hover {
+    background: #138496;
+    transform: translateY(-1px);
 }
 
 .btn-remove {
@@ -838,10 +897,17 @@ h1 {
     padding: 20px;
     border-radius: 12px;
     margin-bottom: 25px;
+    text-align: center;
 }
 
 .add-combatant-inline h4 {
     margin-bottom: 15px;
+}
+
+.add-combatant-inline .btn {
+    min-width: 200px;
+    font-size: 1em;
+    padding: 12px 24px;
 }
 
 .setting-item {
@@ -870,7 +936,9 @@ h1 {
 }
 
 .form-group input[type="password"],
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
     width: 100%;
     padding: 12px 16px;
     background: #2d2d3d;
@@ -881,10 +949,21 @@ h1 {
     transition: border-color 0.3s ease;
 }
 
+.form-group select {
+    cursor: pointer;
+}
+
+.form-group input[type="number"] {
+    cursor: text;
+}
+
 .form-group input[type="password"]:focus,
-.form-group input[type="text"]:focus {
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group select:focus {
     outline: none;
     border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 .remember-me {
@@ -945,6 +1024,9 @@ h1 {
 
 .form-actions {
     margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .form-actions .btn {
@@ -1230,6 +1312,10 @@ body[data-theme="light"] .combatants-section {
     background: #f8f9fa;
 }
 
+body[data-theme="light"] .form-field label {
+    color: #666;
+}
+
 body[data-theme="light"] .form-row input,
 body[data-theme="light"] .form-row select {
     background: white;
@@ -1253,6 +1339,21 @@ body[data-theme="light"] .combatant-card-info span {
 
 body[data-theme="light"] .combatant-card-info small {
     color: #666;
+}
+
+body[data-theme="light"] .combatant-card-info small .adv-normal {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+body[data-theme="light"] .combatant-card-info small .adv-advantage {
+    color: #059669;
+    font-weight: 600;
+}
+
+body[data-theme="light"] .combatant-card-info small .adv-disadvantage {
+    color: #d97706;
+    font-weight: 600;
 }
 
 body[data-theme="light"] .btn-advantage.adv-normal {
@@ -1365,15 +1466,20 @@ body[data-theme="light"] .theme-toggle-menu .theme-btn.active {
 }
 
 body[data-theme="light"] .form-group input[type="password"],
-body[data-theme="light"] .form-group input[type="text"] {
+body[data-theme="light"] .form-group input[type="text"],
+body[data-theme="light"] .form-group input[type="number"],
+body[data-theme="light"] .form-group select {
     background: #f8f9fa;
     border-color: #ddd;
     color: #333;
 }
 
 body[data-theme="light"] .form-group input[type="password"]:focus,
-body[data-theme="light"] .form-group input[type="text"]:focus {
+body[data-theme="light"] .form-group input[type="text"]:focus,
+body[data-theme="light"] .form-group input[type="number"]:focus,
+body[data-theme="light"] .form-group select:focus {
     border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 body[data-theme="light"] .password-error {
