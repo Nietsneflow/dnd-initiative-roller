@@ -170,12 +170,12 @@ header {
 
 h1 {
     color: #7c3aed;
-    font-size: 1.8em;
+    font-size: 1.5em;
     margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
     text-align: center;
 }
@@ -185,9 +185,9 @@ h1 {
     align-items: center;
     gap: 6px;
     background: rgba(124, 58, 237, 0.2);
-    padding: 6px 16px;
+    padding: 5px 14px;
     border-radius: 20px;
-    font-size: 0.7em;
+    font-size: 0.65em;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
@@ -195,7 +195,7 @@ h1 {
 #roundNumber {
     font-weight: bold;
     color: #7c3aed;
-    font-size: 1.2em;
+    font-size: 1.15em;
 }
 
 .header-controls {
