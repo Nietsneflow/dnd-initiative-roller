@@ -499,32 +499,22 @@ function attachEventListeners() {
     
     // Listen for window resize and orientation changes to recalculate initiative order sizing
     let resizeTimer;
-    let lastWidth = window.innerWidth;
-    let lastHeight = window.innerHeight;
     
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            // Only recalculate if size actually changed
-            const widthChange = Math.abs(window.innerWidth - lastWidth);
-            const heightChange = Math.abs(window.innerHeight - lastHeight);
-            
-            if ((widthChange > 10 || heightChange > 10) && combatants.length > 0) {
-                lastWidth = window.innerWidth;
-                lastHeight = window.innerHeight;
-                adjustInitiativeOrderSize();
+            if (combatants.length > 0) {
+                renderInitiativeOrder();
             }
-        }, 200);
+        }, 300);
     });
     
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
             if (combatants.length > 0) {
-                lastWidth = window.innerWidth;
-                lastHeight = window.innerHeight;
-                adjustInitiativeOrderSize();
+                renderInitiativeOrder();
             }
-        }, 400);
+        }, 500);
     });
 }
 
@@ -877,39 +867,43 @@ function adjustInitiativeOrderSize() {
     container.style.setProperty('--type-size', baseTypeSize + 'em');
     container.style.setProperty('--drag-size', baseDragSize + 'em');
     
-    // Wait for rendering to complete
+    // Wait for rendering and layout to fully complete
     pendingAdjustment = requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            // Get all initiative items
-            const items = container.querySelectorAll('.initiative-item');
+            // Force reflow to ensure all measurements are fresh
+            void container.offsetHeight;
             
-            if (items.length === 0) {
+            requestAnimationFrame(() => {
+                // Get all initiative items
+                const items = container.querySelectorAll('.initiative-item');
+                
+                if (items.length === 0) {
+                    isAdjustingSize = false;
+                    pendingAdjustment = null;
+                    return;
+                }
+                
+                // Calculate actual total height needed (sum of all items + gaps)
+                let totalItemsHeight = 0;
+                items.forEach(item => {
+                    totalItemsHeight += item.offsetHeight;
+                });
+                
+                // Add gaps between items
+                const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
+                const totalGapsHeight = currentGap * (items.length - 1);
+                const contentHeight = totalItemsHeight + totalGapsHeight;
+                const containerHeight = container.clientHeight;
+            
+            // If content fits, we're done
+            if (contentHeight <= containerHeight) {
                 isAdjustingSize = false;
                 pendingAdjustment = null;
                 return;
             }
             
-            // Calculate actual total height needed (sum of all items + gaps)
-            let totalItemsHeight = 0;
-            items.forEach(item => {
-                totalItemsHeight += item.offsetHeight;
-            });
-            
-            // Add gaps between items
-            const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
-            const totalGapsHeight = currentGap * (items.length - 1);
-            const contentHeight = totalItemsHeight + totalGapsHeight;
-            const containerHeight = container.clientHeight;
-            
-            // If content fits with buffer, we're done
-            if (contentHeight <= containerHeight * 0.97) {
-                isAdjustingSize = false;
-                pendingAdjustment = null;
-                return;
-            }
-            
-            // Calculate scale factor - need to fit within 92% of container for safety
-            const targetHeight = containerHeight * 0.92;
+            // Calculate scale factor - need to fit within 95% of container to avoid scrollbar
+            const targetHeight = containerHeight * 0.95;
             const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
             
             // Apply scaled values directly from BASE values (not current values)
@@ -928,6 +922,7 @@ function adjustInitiativeOrderSize() {
             
             isAdjustingSize = false;
             pendingAdjustment = null;
+            });
         });
     });
 }
