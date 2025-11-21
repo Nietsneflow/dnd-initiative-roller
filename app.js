@@ -1,19 +1,24 @@
-// Data structure
+// ============================================================================
+// GLOBAL STATE
+// ============================================================================
+
 let combatants = [];
 let currentRound = 1;
 let initiativeHistory = [];
-let currentTheme = 'dark'; // default theme
+let currentTheme = 'dark';
 let isFirebaseReady = false;
-let isUpdatingFromFirebase = false; // Prevent feedback loops
-let currentCampaignId = null; // Current active campaign
-let campaigns = {}; // List of all campaigns {id: {name, lastUpdated}}
-let isAuthenticated = false; // Authentication state
-let wakeLock = null; // Screen Wake Lock
+let isUpdatingFromFirebase = false;
+let currentCampaignId = null;
+let campaigns = {};
+let isAuthenticated = false;
+let wakeLock = null;
 
-// Password configuration - CHANGE THIS TO YOUR PASSWORD
-const APP_PASSWORD = 'dnd2025'; // Change this to your desired password
+const APP_PASSWORD = 'dnd2025'; // CHANGE THIS TO YOUR PASSWORD
 
-// DOM elements
+// ============================================================================
+// DOM ELEMENT REFERENCES
+// ============================================================================
+
 const rerollAllBtn = document.getElementById('rerollAll');
 const nextRoundBtn = document.getElementById('nextRound');
 const resetRoundBtn = document.getElementById('resetRound');
@@ -38,7 +43,10 @@ const rememberMeCheckbox = document.getElementById('rememberMe');
 const logoutBtn = document.getElementById('logoutBtn');
 const togglePasswordBtn = document.getElementById('togglePasswordBtn');
 
-// Toggle password visibility
+// ============================================================================
+// AUTHENTICATION & SECURITY
+// ============================================================================
+
 function togglePasswordVisibility() {
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
@@ -51,7 +59,10 @@ function togglePasswordVisibility() {
     }
 }
 
-// Screen Wake Lock - Prevent screen from sleeping
+// ============================================================================
+// WAKE LOCK MANAGEMENT
+// ============================================================================
+
 async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
@@ -89,7 +100,6 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
-// Check authentication on page load
 function checkAuth() {
     const authToken = localStorage.getItem('dndAuthToken');
     const authExpiry = localStorage.getItem('dndAuthExpiry');
@@ -110,7 +120,6 @@ function checkAuth() {
     return false;
 }
 
-// Show/hide password modal
 function showPasswordModal() {
     const modal = document.getElementById('passwordModal');
     modal.style.display = 'flex';
@@ -122,7 +131,6 @@ function hidePasswordModal() {
     modal.style.display = 'none';
 }
 
-// Handle password submission
 function handlePasswordSubmit(e) {
     e.preventDefault();
     
@@ -149,7 +157,6 @@ function handlePasswordSubmit(e) {
     }
 }
 
-// Authenticate with Firebase anonymously
 async function authenticateWithFirebase() {
     try {
         console.log('Starting Firebase authentication...');
@@ -218,7 +225,6 @@ async function authenticateWithFirebase() {
     }
 }
 
-// Handle logout
 function handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
         // Release wake lock
@@ -236,7 +242,6 @@ function handleLogout() {
     }
 }
 
-// Wait for Firebase to be ready
 function waitForFirebase() {
     return new Promise((resolve) => {
         const checkFirebase = setInterval(() => {
@@ -249,7 +254,6 @@ function waitForFirebase() {
     });
 }
 
-// Initialize app (called after authentication)
 async function initializeApp() {
     // Load device-specific theme BEFORE Firebase loads
     const savedTheme = localStorage.getItem('dndTheme') || 'dark';
@@ -291,7 +295,10 @@ async function initializeApp() {
     attachEventListeners();
 }
 
-// Main init function (checks auth first)
+// ============================================================================
+// APPLICATION INITIALIZATION
+// ============================================================================
+
 async function init() {
     // Attach password modal event listeners immediately (before Firebase is ready)
     passwordForm.addEventListener('submit', handlePasswordSubmit);
@@ -363,7 +370,10 @@ async function init() {
     }
 }
 
-// Event listeners
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
 function attachEventListeners() {
     // Note: Password form listeners are now attached in init() before Firebase loads
     
@@ -487,25 +497,39 @@ function attachEventListeners() {
     
     // Listen for window resize and orientation changes to recalculate initiative order sizing
     let resizeTimer;
+    let lastWidth = window.innerWidth;
+    let lastHeight = window.innerHeight;
+    
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            if (combatants.length > 0) {
+            // Only recalculate if size actually changed
+            const widthChange = Math.abs(window.innerWidth - lastWidth);
+            const heightChange = Math.abs(window.innerHeight - lastHeight);
+            
+            if ((widthChange > 10 || heightChange > 10) && combatants.length > 0) {
+                lastWidth = window.innerWidth;
+                lastHeight = window.innerHeight;
                 adjustInitiativeOrderSize();
             }
-        }, 250);
+        }, 150); // Faster response
     });
     
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
             if (combatants.length > 0) {
+                lastWidth = window.innerWidth;
+                lastHeight = window.innerHeight;
                 adjustInitiativeOrderSize();
             }
-        }, 300);
+        }, 400);
     });
 }
 
-// Add a new combatant (enemy)
+// ============================================================================
+// COMBATANT MANAGEMENT
+// ============================================================================
+
 function addCombatant() {
     const nameInput = document.getElementById('combatantName');
     const dexInput = document.getElementById('combatantDex');
@@ -551,7 +575,6 @@ function addCombatant() {
     saveToFirebase();
 }
 
-// Remove a combatant
 function removeCombatant(id) {
     combatants = combatants.filter(c => c.id !== id);
     renderCombatantLists();
@@ -559,7 +582,6 @@ function removeCombatant(id) {
     saveToFirebase();
 }
 
-// Toggle advantage for a combatant
 function toggleAdvantage(id) {
     const combatant = combatants.find(c => c.id === id);
     if (!combatant) return;
@@ -578,7 +600,6 @@ function toggleAdvantage(id) {
     saveToFirebase();
 }
 
-// Duplicate a combatant
 function duplicateCombatant(id) {
     const combatant = combatants.find(c => c.id === id);
     if (!combatant) return;
@@ -630,12 +651,14 @@ function duplicateCombatant(id) {
     saveToFirebase();
 }
 
-// Roll d20
+// ============================================================================
+// INITIATIVE ROLLING & HISTORY
+// ============================================================================
+
 function rollD20() {
     return Math.floor(Math.random() * 20) + 1;
 }
 
-// Roll initiative for all combatants
 function rollAllInitiative() {
     combatants.forEach(combatant => {
         let roll;
@@ -679,7 +702,6 @@ function rollAllInitiative() {
     renderInitiativeOrder();
 }
 
-// Save current initiative state to history
 function saveToHistory() {
     if (combatants.length === 0) return;
     
@@ -710,7 +732,10 @@ function saveToHistory() {
     }
 }
 
-// Render the initiative order
+// ============================================================================
+// UI RENDERING
+// ============================================================================
+
 function renderInitiativeOrder() {
     if (combatants.length === 0) {
         initiativeOrderDiv.innerHTML = '<p class="empty-state">Add combatants to start rolling initiative!</p>';
@@ -753,11 +778,11 @@ function renderInitiativeOrder() {
         
         let rollDisplay = '';
         if (combatant.advantage === 'advantage') {
-            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (ADV) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
+            rollDisplay = `[${combatant.rolls.join(', ')}] ${combatant.baseRoll} roll + ${dex} dex + ${modifier} mod`;
         } else if (combatant.advantage === 'disadvantage') {
-            rollDisplay = `Roll: [${combatant.rolls.join(', ')}] → ${combatant.baseRoll} (DIS) + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
+            rollDisplay = `[${combatant.rolls.join(', ')}] ${combatant.baseRoll} roll + ${dex} dex + ${modifier} mod`;
         } else {
-            rollDisplay = `Roll: ${combatant.baseRoll} + ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})`;
+            rollDisplay = `${combatant.baseRoll} roll + ${dex} dex + ${modifier} mod`;
         }
         
         const movedIndicator = combatant.wasMoved ? 
@@ -769,10 +794,8 @@ function renderInitiativeOrder() {
                 <div class="initiative-info">
                     <div class="initiative-roll">${combatant.initiative}${movedIndicator}</div>
                     <div class="initiative-details">
-                        <div class="combatant-name">${combatant.name}</div>
-                        <div class="combatant-modifier">
-                            ${rollDisplay}
-                        </div>
+                        <span class="combatant-name">${combatant.name}</span>
+                        <span class="combatant-modifier">${rollDisplay}</span>
                     </div>
                 </div>
                 <span class="combatant-type ${combatant.type}">${combatant.type}</span>
@@ -787,84 +810,82 @@ function renderInitiativeOrder() {
     adjustInitiativeOrderSize();
 }
 
-// Adjust initiative order size to fit all items without scrolling
 function adjustInitiativeOrderSize() {
     const container = initiativeOrderDiv;
     const itemCount = combatants.length;
     
-    if (itemCount === 0) return;
+    if (itemCount === 0) {
+        container.style.setProperty('--item-gap', '12px');
+        container.style.setProperty('--item-padding', '20px');
+        container.style.setProperty('--name-size', '2.2em');
+        container.style.setProperty('--roll-size', '3.0em');
+        container.style.setProperty('--modifier-size', '1.3em');
+        container.style.setProperty('--type-size', '1.1em');
+        container.style.setProperty('--drag-size', '1.5em');
+        return;
+    }
     
-    // Remove existing classes
-    container.classList.remove('compact', 'very-compact', 'ultra-compact');
+    const isMobile = window.innerWidth <= 768;
     
-    // Get container height
+    // Set initial full-size values
+    if (isMobile) {
+        container.style.setProperty('--item-gap', '8px');
+        container.style.setProperty('--item-padding', '12px');
+        container.style.setProperty('--name-size', '1.5em');
+        container.style.setProperty('--roll-size', '2.2em');
+        container.style.setProperty('--modifier-size', '1.0em');
+        container.style.setProperty('--type-size', '0.85em');
+        container.style.setProperty('--drag-size', '1.2em');
+    } else {
+        container.style.setProperty('--item-gap', '12px');
+        container.style.setProperty('--item-padding', '20px');
+        container.style.setProperty('--name-size', '2.2em');
+        container.style.setProperty('--roll-size', '3.0em');
+        container.style.setProperty('--modifier-size', '1.3em');
+        container.style.setProperty('--type-size', '1.1em');
+        container.style.setProperty('--drag-size', '1.5em');
+    }
+    
+    // Force a reflow to get accurate measurements
+    container.offsetHeight;
+    
+    // Measure actual content height
+    const contentHeight = container.scrollHeight;
     const containerHeight = container.clientHeight;
     
-    // Detect if we're in landscape mode on mobile (extreme height constraint)
-    const isLandscapeMobile = window.innerHeight < 500 && window.innerWidth > window.innerHeight;
+    // If content fits, we're done
+    if (contentHeight <= containerHeight) {
+        return;
+    }
     
-    // Start with default gap
-    let gapSize = 12;
-    let modeClass = '';
+    // Content doesn't fit - scale it down
+    const scaleFactor = Math.max(0.5, containerHeight / contentHeight);
     
-    // Calculate what we need
-    const estimateHeightNeeded = (gap, itemHeight) => {
-        return (itemCount * itemHeight) + ((itemCount - 1) * gap);
-    };
+    const baseGap = isMobile ? 8 : 12;
+    const basePadding = isMobile ? 12 : 20;
     
-    // In landscape mode, be more aggressive with compression
-    if (isLandscapeMobile) {
-        if (estimateHeightNeeded(6, 40) <= containerHeight) {
-            modeClass = 'compact';
-            gapSize = 6;
-        } else if (estimateHeightNeeded(4, 35) <= containerHeight) {
-            modeClass = 'very-compact';
-            gapSize = 4;
-        } else {
-            modeClass = 'ultra-compact';
-            gapSize = 3;
-        }
+    const gap = Math.max(4, Math.round(baseGap * scaleFactor));
+    const padding = Math.max(8, Math.round(basePadding * scaleFactor));
+    
+    if (isMobile) {
+        container.style.setProperty('--item-gap', gap + 'px');
+        container.style.setProperty('--item-padding', padding + 'px');
+        container.style.setProperty('--name-size', Math.max(1.1, 1.5 * scaleFactor) + 'em');
+        container.style.setProperty('--roll-size', Math.max(1.6, 2.2 * scaleFactor) + 'em');
+        container.style.setProperty('--modifier-size', Math.max(0.8, 1.0 * scaleFactor) + 'em');
+        container.style.setProperty('--type-size', Math.max(0.7, 0.85 * scaleFactor) + 'em');
+        container.style.setProperty('--drag-size', Math.max(1.0, 1.2 * scaleFactor) + 'em');
     } else {
-        // Normal mode detection
-        if (estimateHeightNeeded(12, 80) <= containerHeight) {
-            // Normal mode fits
-            gapSize = 12;
-        } else if (estimateHeightNeeded(10, 60) <= containerHeight) {
-            // Compact mode
-            modeClass = 'compact';
-            gapSize = 10;
-        } else if (estimateHeightNeeded(8, 50) <= containerHeight) {
-            // Very compact mode
-            modeClass = 'very-compact';
-            gapSize = 8;
-        } else {
-            // Ultra compact mode - must fit!
-            modeClass = 'ultra-compact';
-            gapSize = 4;
-        }
+        container.style.setProperty('--item-gap', gap + 'px');
+        container.style.setProperty('--item-padding', padding + 'px');
+        container.style.setProperty('--name-size', Math.max(1.5, 2.2 * scaleFactor) + 'em');
+        container.style.setProperty('--roll-size', Math.max(2.0, 3.0 * scaleFactor) + 'em');
+        container.style.setProperty('--modifier-size', Math.max(1.0, 1.3 * scaleFactor) + 'em');
+        container.style.setProperty('--type-size', Math.max(0.85, 1.1 * scaleFactor) + 'em');
+        container.style.setProperty('--drag-size', Math.max(1.2, 1.5 * scaleFactor) + 'em');
     }
-    
-    if (modeClass) {
-        container.classList.add(modeClass);
-    }
-    
-    // Calculate exact height per item
-    const totalGapHeight = (itemCount - 1) * gapSize;
-    const availableHeightPerItem = (containerHeight - totalGapHeight) / itemCount;
-    
-    // Set dynamic height with lower minimum for landscape
-    const minHeight = isLandscapeMobile ? 25 : 30;
-    if (availableHeightPerItem < 80) {
-        container.style.setProperty('--item-height', `${Math.max(availableHeightPerItem, minHeight)}px`);
-    } else {
-        container.style.setProperty('--item-height', 'auto');
-    }
-    
-    // Force disable scrolling
-    container.style.overflowY = 'hidden';
 }
 
-// Render combatant lists (Party, Enemies & Friendlies)
 function renderCombatantLists() {
     const party = combatants.filter(c => c.type === 'party');
     const enemies = combatants.filter(c => c.type === 'enemy');
@@ -889,12 +910,15 @@ function renderCombatantLists() {
             const dex = combatant.dex || 0;
             const modifier = combatant.modifier || 0;
             const bonus = dex + modifier;
+            const bonusSign = bonus >= 0 ? '+' : '';
+            const modSign = modifier >= 0 ? '+' : '';
             
             return `
                 <div class="combatant-card party">
                     <div class="combatant-card-info">
-                        <span>${combatant.name}</span>
-                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier}) | <span class="${advantageClass}">${advantageText}</span></small>
+                        <div class="combatant-card-name">${combatant.name}</div>
+                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
+                        <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
@@ -924,12 +948,14 @@ function renderCombatantLists() {
             const dex = combatant.dex || 0;
             const modifier = combatant.modifier || 0;
             const bonus = dex + modifier;
+            const bonusSign = bonus >= 0 ? '+' : '';
+            const modSign = modifier >= 0 ? '+' : '';
             
             return `
                 <div class="combatant-card enemy">
                     <div class="combatant-card-info">
-                        <span>${combatant.name}</span>
-                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier})</small>
+                        <div class="combatant-card-name">${combatant.name}</div>
+                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-copy" onclick="duplicateCombatant(${combatant.id})" title="Duplicate this enemy">Copy</button>
@@ -960,12 +986,15 @@ function renderCombatantLists() {
             const dex = combatant.dex || 0;
             const modifier = combatant.modifier || 0;
             const bonus = dex + modifier;
+            const bonusSign = bonus >= 0 ? '+' : '';
+            const modSign = modifier >= 0 ? '+' : '';
             
             return `
                 <div class="combatant-card friendly">
                     <div class="combatant-card-info">
-                        <span>${combatant.name}</span>
-                        <small>Initiative: ${bonus >= 0 ? '+' : ''}${bonus} (${dex} Dex + ${modifier >= 0 ? '+' : ''}${modifier}) | <span class="${advantageClass}">${advantageText}</span></small>
+                        <div class="combatant-card-name">${combatant.name}</div>
+                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
+                        <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
                     </div>
                     <div class="combatant-actions">
                         <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
@@ -977,7 +1006,10 @@ function renderCombatantLists() {
     }
 }
 
-// Drag and drop functionality
+// ============================================================================
+// DRAG AND DROP
+// ============================================================================
+
 let draggedElement = null;
 let draggedId = null;
 
@@ -1132,12 +1164,14 @@ function handleDragEnd(e) {
     draggedId = null;
 }
 
-// Update round display
+// ============================================================================
+// FIREBASE INTEGRATION
+// ============================================================================
+
 function updateRoundDisplay() {
     roundNumberSpan.textContent = currentRound;
 }
 
-// Firebase functions
 function saveToFirebase() {
     if (!isFirebaseReady || isUpdatingFromFirebase || !currentCampaignId) return;
     
@@ -1273,7 +1307,10 @@ function loadFromFirebase() {
     });
 }
 
-// Show manage party modal
+// ============================================================================
+// PARTY MANAGEMENT
+// ============================================================================
+
 function showManagePartyModal() {
     const modal = document.getElementById('managePartyModal');
     updateThemeButtons();
@@ -1293,7 +1330,6 @@ function closeManagePartyModal() {
     modal.style.display = 'none';
 }
 
-// Show/hide Add/Edit Party Member modal
 function showAddEditPartyModal(combatantId = null) {
     const modal = document.getElementById('addEditPartyModal');
     const title = document.getElementById('addEditPartyTitle');
@@ -1339,7 +1375,6 @@ function closeAddEditPartyModal() {
     modal.style.display = 'none';
 }
 
-// Save party member (add or update)
 function savePartyMember() {
     const editId = document.getElementById('editPartyId').value;
     const name = document.getElementById('partyMemberName').value.trim();
@@ -1387,12 +1422,14 @@ function savePartyMember() {
     closeAddEditPartyModal();
 }
 
-// Edit party member
 function editPartyMember(id) {
     showAddEditPartyModal(id);
 }
 
-// Theme management
+// ============================================================================
+// THEME MANAGEMENT
+// ============================================================================
+
 function setTheme(theme) {
     currentTheme = theme;
     document.body.setAttribute('data-theme', theme);
@@ -1411,7 +1448,10 @@ function updateThemeButtons() {
     }
 }
 
-// Campaign management
+// ============================================================================
+// CAMPAIGN MANAGEMENT
+// ============================================================================
+
 async function loadCampaignList() {
     return new Promise((resolve) => {
         const campaignsRef = window.firebaseRef(window.firebaseDB, 'campaigns');
@@ -1616,7 +1656,10 @@ function renderCampaignList() {
     }).join('');
 }
 
-// Show history modal
+// ============================================================================
+// HISTORY MODAL
+// ============================================================================
+
 function showHistoryModal() {
     const modal = document.getElementById('historyModal');
     const historyContent = document.getElementById('historyContent');
@@ -1705,7 +1748,6 @@ function closeHistoryModal() {
     modal.style.display = 'none';
 }
 
-// Close modal when clicking outside
 window.addEventListener('click', (e) => {
     const historyModal = document.getElementById('historyModal');
     if (e.target === historyModal) {
@@ -1713,5 +1755,8 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Initialize on page load
+// ============================================================================
+// PAGE LOAD
+// ============================================================================
+
 document.addEventListener('DOMContentLoaded', init);

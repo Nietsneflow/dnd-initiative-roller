@@ -276,9 +276,7 @@ h1 {
 }
 
 .initiative-list {
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
+    margin-bottom: 15px;
 }
 
 .initiative-list h2 {
@@ -286,147 +284,40 @@ h1 {
     margin-bottom: 15px;
     font-size: 1.8em;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .order-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    overflow-y: hidden;
-    overflow-x: hidden;
-    padding-right: 5px;
-    max-height: calc(100vh - 280px);
-    min-height: 200px;
-    --item-height: auto;
+    gap: var(--item-gap, 12px);
+    overflow-y: auto;
+    position: relative;
+    max-height: calc(100vh - 400px);
+    
+    --item-gap: 12px;
+    --item-padding: 20px;
+    --name-size: 2.2em;
+    --roll-size: 3.0em;
+    --modifier-size: 1.3em;
+    --type-size: 1.1em;
+    --drag-size: 1.5em;
 }
 
 .initiative-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px;
+    padding: var(--item-padding, 20px);
     background: linear-gradient(135deg, #2d2d3d 0%, #3a3a4a 100%);
     border-radius: 12px;
     border-left: 6px solid #7c3aed;
     transition: all 0.3s ease;
     cursor: move;
     position: relative;
-    min-height: var(--item-height);
-    max-height: var(--item-height);
-    overflow: hidden;
+    z-index: 1;
+    min-height: 70px;
 }
-.order-container.compact {
-    gap: 10px;
-}
-
-.order-container.compact .initiative-item {
-    padding: 12px;
-}
-
-.order-container.compact .initiative-roll {
-    font-size: 1.5em;
-    min-width: 50px;
-    padding: 6px;
-}
-
-.order-container.compact .combatant-name {
-    font-size: 1.1em;
-}
-
-.order-container.compact .combatant-modifier {
-    font-size: 0.8em;
-}
-
-.order-container.compact .drag-handle {
-    font-size: 1em;
-}
-
-.order-container.very-compact .initiative-item {
-    padding: 8px;
-}
-
-.order-container.very-compact {
-    gap: 8px;
-}
-
-.order-container.very-compact .initiative-roll {
-    font-size: 1.3em;
-    min-width: 45px;
-    padding: 4px;
-}
-
-.order-container.very-compact .combatant-name {
-    font-size: 1em;
-}
-
-.order-container.very-compact .combatant-modifier {
-    font-size: 0.75em;
-}
-
-.order-container.very-compact .combatant-type {
-    font-size: 0.7em;
-    padding: 3px 8px;
-}
-
-.order-container.very-compact .drag-handle {
-    font-size: 0.9em;
-    margin-right: 6px;
-}
-
-.order-container.very-compact .initiative-info {
-    gap: 12px;
-}
-
-/* Ultra compact for very large lists */
-.order-container.ultra-compact {
-    gap: 4px;
-}
-
-.order-container.ultra-compact .initiative-item {
-    padding: 4px 8px;
-}
-
-.order-container.ultra-compact .initiative-roll {
-    font-size: 1.2em;
-    min-width: 40px;
-    padding: 3px;
-}
-
-.order-container.ultra-compact .combatant-name {
-    font-size: 0.95em;
-}
-
-.order-container.ultra-compact .combatant-modifier {
-    font-size: 0.7em;
-}
-
-.order-container.ultra-compact .combatant-type {
-    font-size: 0.65em;
-    padding: 2px 6px;
-}
-
-.order-container.ultra-compact .drag-handle {
-    font-size: 0.85em;
-    margin-right: 4px;
-}
-
-.order-container.ultra-compact .initiative-info {
-    gap: 10px;
-}
-
-.initiative-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #2d2d3d 0%, #3a3a4a 100%);
-    border-radius: 12px;
-    border-left: 6px solid #7c3aed;
-    transition: all 0.3s ease;
-    cursor: move;
-    position: relative;
-}
-
 .initiative-item:hover {
     transform: translateX(5px);
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
@@ -442,7 +333,7 @@ h1 {
 }
 
 .drag-handle {
-    font-size: 1.2em;
+    font-size: var(--drag-size, 1.5em);
     color: #666;
     margin-right: 10px;
     cursor: grab;
@@ -477,10 +368,11 @@ h1 {
 }
 
 .initiative-roll {
-    font-size: 2em;
+    font-size: var(--roll-size, 3.0em);
     font-weight: bold;
     color: #7c3aed;
-    min-width: 60px;
+    min-width: 70px;
+    max-width: 90px;
     text-align: center;
     background: #1e1e2e;
     padding: 10px;
@@ -491,6 +383,9 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 5px;
+    flex-shrink: 0;
+    height: auto;
+    max-height: 100%;
 }
 
 .moved-indicator {
@@ -507,26 +402,34 @@ h1 {
 
 .initiative-details {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 10px;
+    align-items: baseline;
 }
 
 .combatant-name {
-    font-size: 1.3em;
+    font-size: var(--name-size, 2.2em);
     font-weight: 600;
     color: #e0e0e0;
 }
 
+.combatant-modifier-inline {
+    font-size: 0.7em;
+    color: #888;
+    font-weight: normal;
+    margin-left: 8px;
+}
+
 .combatant-modifier {
-    font-size: 0.9em;
+    font-size: var(--modifier-size, 1.3em);
     color: #b0b0b0;
 }
 
 .combatant-type {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border-radius: 12px;
-    font-size: 0.8em;
+    font-size: var(--type-size, 1.1em);
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -565,6 +468,8 @@ h1 {
     padding: 20px;
     border-radius: 12px;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 2;
 }
 
 .add-combatant h3 {
@@ -692,6 +597,58 @@ h1 {
 
 .combatant-card.friendly {
     border-left-color: #17a2b8;
+}
+
+.combatant-card-info {
+    display: flex;
+    flex-direction: column !important;
+    gap: 4px;
+    overflow: hidden;
+    flex: 1;
+}
+
+.combatant-card-info .combatant-card-name {
+    font-weight: 600;
+    color: #e0e0e0;
+    font-size: 1em;
+    display: block;
+}
+
+.combatant-card-info .combatant-card-details {
+    color: #888;
+    font-size: 0.85em;
+    font-weight: normal;
+    line-height: 1.4;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.combatant-card-info .combatant-card-details strong {
+    color: #b0b0b0;
+    font-weight: 700;
+}
+
+.combatant-card-info .combatant-card-advantage {
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-top: 2px;
+    display: block;
+}
+
+.combatant-card-info .combatant-card-advantage.adv-normal {
+    color: #9ca3af;
+}
+
+.combatant-card-info .combatant-card-advantage.adv-advantage {
+    color: #34d399;
+    font-weight: 600;
+}
+
+.combatant-card-info .combatant-card-advantage.adv-disadvantage {
+    color: #fbbf24;
+    font-weight: 600;
 }
 
 .combatant-card-info span {
@@ -1478,6 +1435,33 @@ body[data-theme="light"] .combatant-card {
     border-left-color: #667eea;
 }
 
+body[data-theme="light"] .combatant-card-info .combatant-card-name {
+    color: #333;
+}
+
+body[data-theme="light"] .combatant-card-info .combatant-card-details {
+    color: #666;
+}
+
+body[data-theme="light"] .combatant-card-info .combatant-card-details strong {
+    color: #333;
+}
+
+body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-normal {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-advantage {
+    color: #059669;
+    font-weight: 600;
+}
+
+body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-disadvantage {
+    color: #d97706;
+    font-weight: 600;
+}
+
 body[data-theme="light"] .combatant-card-info span {
     color: #333;
 }
@@ -1809,12 +1793,24 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
 
     .form-row {
         flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-field {
+        width: 100%;
     }
 
     .form-row input,
     .form-row select,
     .form-row button {
         width: 100%;
+    }
+
+    .form-field:has(input[type="text"]),
+    .form-field:has(input[type="number"]),
+    .form-field:has(select) {
+        min-width: 0;
+        flex: none;
     }
 
     .combatants-manager {
@@ -1831,13 +1827,10 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
         flex-direction: row;
         align-items: center;
         gap: 4px;
-        padding: 8px 10px;
-        font-size: 0.75em;
         min-height: auto;
     }
     
     .drag-handle {
-        font-size: 0.9em;
         margin-right: 4px;
     }
 
@@ -1849,7 +1842,6 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     }
     
     .initiative-roll {
-        font-size: 1.3em;
         min-width: 40px;
         padding: 4px 6px;
     }
@@ -1860,24 +1852,17 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     }
     
     .combatant-name {
-        font-size: 0.95em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     
-    .combatant-modifier {
-        font-size: 0.75em;
-    }
-    
     .combatant-type {
-        font-size: 0.65em;
         padding: 3px 6px;
         white-space: nowrap;
     }
     
     .moved-indicator {
-        font-size: 0.9em;
         padding: 2px 3px;
     }
 
@@ -1985,32 +1970,10 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     .actions {
         padding-top: 10px;
     }
-
-    /* Force even more compact sizing in landscape */
-    .order-container.compact .initiative-item {
-        padding: 6px;
-    }
-
-    .order-container.very-compact .initiative-item {
-        padding: 4px;
-    }
-
-    .order-container.ultra-compact .initiative-item {
-        padding: 2px 6px;
-    }
 }
 
 @media (min-width: 1400px) {
     .container {
         max-width: 1400px;
-    }
-
-    .initiative-roll {
-        font-size: 2.5em;
-        min-width: 80px;
-    }
-
-    .combatant-name {
-        font-size: 1.5em;
     }
 }
