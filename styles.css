@@ -4,10 +4,6 @@
     box-sizing: border-box;
 }
 
-html {
-    height: 100vh;
-}
-
 /* Custom scrollbar styling */
 .order-container::-webkit-scrollbar {
     width: 8px;
@@ -30,7 +26,7 @@ html {
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    min-height: 100vh;
+    background-attachment: fixed;
     padding: 20px;
     color: #e0e0e0;
 }
@@ -292,11 +288,14 @@ h1 {
     flex-direction: column;
     gap: var(--item-gap, 12px);
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
-    max-height: calc(100vh - 400px);
+    min-height: 60vh;
+    max-height: 80vh;
     
     --item-gap: 12px;
     --item-padding: 20px;
+    --item-min-height: 70px;
     --name-size: 2.2em;
     --roll-size: 3.0em;
     --modifier-size: 1.3em;
@@ -316,7 +315,7 @@ h1 {
     cursor: move;
     position: relative;
     z-index: 1;
-    min-height: 70px;
+    min-height: var(--item-min-height, 70px);
 }
 .initiative-item:hover {
     transform: translateX(5px);
@@ -1731,7 +1730,8 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     }
 
     .order-container {
-        max-height: calc(100vh - 320px);
+        min-height: 50vh;
+        max-height: 75vh;
     }
 
     header {
@@ -1849,12 +1849,20 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     .initiative-details {
         flex: 1;
         min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
     }
     
     .combatant-name {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        width: 100%;
+    }
+    
+    .combatant-modifier {
+        width: 100%;
     }
     
     .combatant-type {
@@ -1955,7 +1963,8 @@ body[data-theme="light"] #editCampaignForm input[type="text"]:focus {
     }
 
     .order-container {
-        max-height: calc(100vh - 180px);
+        min-height: 40vh;
+        max-height: 65vh;
     }
 
     .add-combatant {

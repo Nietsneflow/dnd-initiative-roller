@@ -12,6 +12,8 @@ let currentCampaignId = null;
 let campaigns = {};
 let isAuthenticated = false;
 let wakeLock = null;
+let isAdjustingSize = false;
+let pendingAdjustment = null;
 
 const APP_PASSWORD = 'dnd2025'; // CHANGE THIS TO YOUR PASSWORD
 
@@ -512,7 +514,7 @@ function attachEventListeners() {
                 lastHeight = window.innerHeight;
                 adjustInitiativeOrderSize();
             }
-        }, 150); // Faster response
+        }, 200);
     });
     
     window.addEventListener('orientationchange', () => {
@@ -814,9 +816,21 @@ function adjustInitiativeOrderSize() {
     const container = initiativeOrderDiv;
     const itemCount = combatants.length;
     
+    // Cancel any pending adjustment
+    if (pendingAdjustment) {
+        cancelAnimationFrame(pendingAdjustment);
+        pendingAdjustment = null;
+    }
+    
+    // If already adjusting, skip
+    if (isAdjustingSize) {
+        return;
+    }
+    
     if (itemCount === 0) {
         container.style.setProperty('--item-gap', '12px');
         container.style.setProperty('--item-padding', '20px');
+        container.style.setProperty('--item-min-height', '70px');
         container.style.setProperty('--name-size', '2.2em');
         container.style.setProperty('--roll-size', '3.0em');
         container.style.setProperty('--modifier-size', '1.3em');
@@ -825,65 +839,101 @@ function adjustInitiativeOrderSize() {
         return;
     }
     
-    const isMobile = window.innerWidth <= 768;
+    isAdjustingSize = true;
     
-    // Set initial full-size values
-    if (isMobile) {
-        container.style.setProperty('--item-gap', '8px');
-        container.style.setProperty('--item-padding', '12px');
-        container.style.setProperty('--name-size', '1.5em');
-        container.style.setProperty('--roll-size', '2.2em');
-        container.style.setProperty('--modifier-size', '1.0em');
-        container.style.setProperty('--type-size', '0.85em');
-        container.style.setProperty('--drag-size', '1.2em');
-    } else {
-        container.style.setProperty('--item-gap', '12px');
-        container.style.setProperty('--item-padding', '20px');
-        container.style.setProperty('--name-size', '2.2em');
-        container.style.setProperty('--roll-size', '3.0em');
-        container.style.setProperty('--modifier-size', '1.3em');
-        container.style.setProperty('--type-size', '1.1em');
-        container.style.setProperty('--drag-size', '1.5em');
-    }
+    const windowWidth = window.innerWidth;
+    const isMobile = windowWidth <= 768;
     
-    // Force a reflow to get accurate measurements
-    container.offsetHeight;
-    
-    // Measure actual content height
-    const contentHeight = container.scrollHeight;
-    const containerHeight = container.clientHeight;
-    
-    // If content fits, we're done
-    if (contentHeight <= containerHeight) {
-        return;
-    }
-    
-    // Content doesn't fit - scale it down
-    const scaleFactor = Math.max(0.5, containerHeight / contentHeight);
-    
-    const baseGap = isMobile ? 8 : 12;
-    const basePadding = isMobile ? 12 : 20;
-    
-    const gap = Math.max(4, Math.round(baseGap * scaleFactor));
-    const padding = Math.max(8, Math.round(basePadding * scaleFactor));
+    // Calculate responsive base values
+    let baseGap, basePadding, baseMinHeight, baseNameSize, baseRollSize, baseModifierSize, baseTypeSize, baseDragSize;
     
     if (isMobile) {
-        container.style.setProperty('--item-gap', gap + 'px');
-        container.style.setProperty('--item-padding', padding + 'px');
-        container.style.setProperty('--name-size', Math.max(1.1, 1.5 * scaleFactor) + 'em');
-        container.style.setProperty('--roll-size', Math.max(1.6, 2.2 * scaleFactor) + 'em');
-        container.style.setProperty('--modifier-size', Math.max(0.8, 1.0 * scaleFactor) + 'em');
-        container.style.setProperty('--type-size', Math.max(0.7, 0.85 * scaleFactor) + 'em');
-        container.style.setProperty('--drag-size', Math.max(1.0, 1.2 * scaleFactor) + 'em');
+        baseGap = 8;
+        basePadding = 12;
+        baseMinHeight = 50;
+        baseNameSize = 1.5;
+        baseRollSize = 2.2;
+        baseModifierSize = 1.0;
+        baseTypeSize = 0.85;
+        baseDragSize = 1.2;
     } else {
-        container.style.setProperty('--item-gap', gap + 'px');
-        container.style.setProperty('--item-padding', padding + 'px');
-        container.style.setProperty('--name-size', Math.max(1.5, 2.2 * scaleFactor) + 'em');
-        container.style.setProperty('--roll-size', Math.max(2.0, 3.0 * scaleFactor) + 'em');
-        container.style.setProperty('--modifier-size', Math.max(1.0, 1.3 * scaleFactor) + 'em');
-        container.style.setProperty('--type-size', Math.max(0.85, 1.1 * scaleFactor) + 'em');
-        container.style.setProperty('--drag-size', Math.max(1.2, 1.5 * scaleFactor) + 'em');
+        baseGap = 12;
+        basePadding = 20;
+        baseMinHeight = 70;
+        baseNameSize = 2.2;
+        baseRollSize = 3.0;
+        baseModifierSize = 1.3;
+        baseTypeSize = 1.1;
+        baseDragSize = 1.5;
     }
+    
+    // Set base values first
+    container.style.setProperty('--item-gap', baseGap + 'px');
+    container.style.setProperty('--item-padding', basePadding + 'px');
+    container.style.setProperty('--item-min-height', baseMinHeight + 'px');
+    container.style.setProperty('--name-size', baseNameSize + 'em');
+    container.style.setProperty('--roll-size', baseRollSize + 'em');
+    container.style.setProperty('--modifier-size', baseModifierSize + 'em');
+    container.style.setProperty('--type-size', baseTypeSize + 'em');
+    container.style.setProperty('--drag-size', baseDragSize + 'em');
+    
+    // Wait for rendering to complete
+    pendingAdjustment = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // Get all initiative items
+            const items = container.querySelectorAll('.initiative-item');
+            
+            if (items.length === 0) {
+                isAdjustingSize = false;
+                pendingAdjustment = null;
+                return;
+            }
+            
+            // Calculate actual total height needed (sum of all items + gaps)
+            let totalItemsHeight = 0;
+            items.forEach(item => {
+                totalItemsHeight += item.offsetHeight;
+            });
+            
+            // Add gaps between items
+            const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
+            const totalGapsHeight = currentGap * (items.length - 1);
+            const contentHeight = totalItemsHeight + totalGapsHeight;
+            const containerHeight = container.clientHeight;
+            
+            // If content fits with buffer, we're done
+            if (contentHeight <= containerHeight * 0.97) {
+                isAdjustingSize = false;
+                pendingAdjustment = null;
+                return;
+            }
+            
+            // Calculate scale factor - need to fit within 92% of container for safety
+            const targetHeight = containerHeight * 0.92;
+            const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
+            
+            // Apply scaled values directly from BASE values (not current values)
+            const gap = Math.max(1, Math.round(baseGap * scaleFactor));
+            const padding = Math.max(3, Math.round(basePadding * scaleFactor));
+            const minHeight = Math.max(25, Math.round(baseMinHeight * scaleFactor));
+            
+            container.style.setProperty('--item-gap', gap + 'px');
+            container.style.setProperty('--item-padding', padding + 'px');
+            container.style.setProperty('--item-min-height', minHeight + 'px');
+            container.style.setProperty('--name-size', Math.max(0.6, baseNameSize * scaleFactor) + 'em');
+            container.style.setProperty('--roll-size', Math.max(0.8, baseRollSize * scaleFactor) + 'em');
+            container.style.setProperty('--modifier-size', Math.max(0.5, baseModifierSize * scaleFactor) + 'em');
+            container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
+            container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
+            
+            isAdjustingSize = false;
+            pendingAdjustment = null;
+        });
+    });
+}
+
+function attemptFit(container, baseGap, basePadding, baseMinHeight, baseNameSize, baseRollSize, baseModifierSize, baseTypeSize, baseDragSize, isMobile, iteration = 0) {
+    // This function is no longer used but kept for compatibility
 }
 
 function renderCombatantLists() {
