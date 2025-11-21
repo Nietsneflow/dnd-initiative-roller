@@ -806,10 +806,11 @@ function adjustInitiativeOrderSize() {
     const container = initiativeOrderDiv;
     const itemCount = combatants.length;
     
-    // Cancel any pending adjustment
+    // Cancel any pending adjustment and reset flag
     if (pendingAdjustment) {
-        cancelAnimationFrame(pendingAdjustment);
+        clearTimeout(pendingAdjustment);
         pendingAdjustment = null;
+        isAdjustingSize = false;
     }
     
     // If already adjusting, skip
@@ -867,64 +868,75 @@ function adjustInitiativeOrderSize() {
     container.style.setProperty('--type-size', baseTypeSize + 'em');
     container.style.setProperty('--drag-size', baseDragSize + 'em');
     
-    // Wait for rendering and layout to fully complete
-    pendingAdjustment = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // Force reflow to ensure all measurements are fresh
-            void container.offsetHeight;
-            
-            requestAnimationFrame(() => {
-                // Get all initiative items
-                const items = container.querySelectorAll('.initiative-item');
-                
-                if (items.length === 0) {
-                    isAdjustingSize = false;
-                    pendingAdjustment = null;
-                    return;
-                }
-                
-                // Calculate actual total height needed (sum of all items + gaps)
-                let totalItemsHeight = 0;
-                items.forEach(item => {
-                    totalItemsHeight += item.offsetHeight;
-                });
-                
-                // Add gaps between items
-                const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
-                const totalGapsHeight = currentGap * (items.length - 1);
-                const contentHeight = totalItemsHeight + totalGapsHeight;
-                const containerHeight = container.clientHeight;
-            
-            // If content fits, we're done
-            if (contentHeight <= containerHeight) {
-                isAdjustingSize = false;
-                pendingAdjustment = null;
-                return;
-            }
-            
-            // Calculate scale factor - need to fit within 95% of container to avoid scrollbar
-            const targetHeight = containerHeight * 0.95;
-            const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
-            
-            // Apply scaled values directly from BASE values (not current values)
-            const gap = Math.max(1, Math.round(baseGap * scaleFactor));
-            const padding = Math.max(3, Math.round(basePadding * scaleFactor));
-            const minHeight = Math.max(25, Math.round(baseMinHeight * scaleFactor));
-            
-            container.style.setProperty('--item-gap', gap + 'px');
-            container.style.setProperty('--item-padding', padding + 'px');
-            container.style.setProperty('--item-min-height', minHeight + 'px');
-            container.style.setProperty('--name-size', Math.max(0.6, baseNameSize * scaleFactor) + 'em');
-            container.style.setProperty('--roll-size', Math.max(0.8, baseRollSize * scaleFactor) + 'em');
-            container.style.setProperty('--modifier-size', Math.max(0.5, baseModifierSize * scaleFactor) + 'em');
-            container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
-            container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
-            
+    // Force complete layout cycle before measuring
+    pendingAdjustment = setTimeout(() => {
+        console.log('🔍 adjustInitiativeOrderSize: Starting measurement');
+        // Force reflow
+        void container.offsetHeight;
+        
+        // Get all initiative items
+        const items = container.querySelectorAll('.initiative-item');
+        
+        if (items.length === 0) {
+            console.log('⚠️ No items found');
             isAdjustingSize = false;
             pendingAdjustment = null;
-            });
+            return;
+        }
+        
+        // Calculate actual total height needed (sum of all items + gaps)
+        let totalItemsHeight = 0;
+        items.forEach(item => {
+            totalItemsHeight += item.offsetHeight;
         });
-    });
+        
+        // Add gaps between items
+        const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
+        const totalGapsHeight = currentGap * (items.length - 1);
+        const contentHeight = totalItemsHeight + totalGapsHeight;
+        const containerHeight = container.clientHeight;
+        
+        console.log('📊 Measurements:', {
+            itemCount: items.length,
+            totalItemsHeight,
+            totalGapsHeight,
+            contentHeight,
+            containerHeight,
+            needsScaling: contentHeight > containerHeight
+        });
+        
+        // If content fits, we're done
+        if (contentHeight <= containerHeight) {
+            console.log('✅ Content fits, no scaling needed');
+            isAdjustingSize = false;
+            pendingAdjustment = null;
+            return;
+        }
+        
+        // Calculate scale factor - need to fit within 95% of container to avoid scrollbar
+        const targetHeight = containerHeight * 0.95;
+        const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
+        
+        console.log('📐 Scaling:', { targetHeight, scaleFactor });
+        
+        // Apply scaled values directly from BASE values (not current values)
+        const gap = Math.max(1, Math.round(baseGap * scaleFactor));
+        const padding = Math.max(3, Math.round(basePadding * scaleFactor));
+        const minHeight = Math.max(25, Math.round(baseMinHeight * scaleFactor));
+        
+        container.style.setProperty('--item-gap', gap + 'px');
+        container.style.setProperty('--item-padding', padding + 'px');
+        container.style.setProperty('--item-min-height', minHeight + 'px');
+        container.style.setProperty('--name-size', Math.max(0.6, baseNameSize * scaleFactor) + 'em');
+        container.style.setProperty('--roll-size', Math.max(0.8, baseRollSize * scaleFactor) + 'em');
+        container.style.setProperty('--modifier-size', Math.max(0.5, baseModifierSize * scaleFactor) + 'em');
+        container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
+        container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
+        
+        console.log('✅ Scaling applied');
+        isAdjustingSize = false;
+        pendingAdjustment = null;
+    }, 100);
 }
 
 function attemptFit(container, baseGap, basePadding, baseMinHeight, baseNameSize, baseRollSize, baseModifierSize, baseTypeSize, baseDragSize, isMobile, iteration = 0) {
