@@ -2,6 +2,14 @@
 // GLOBAL STATE
 // ============================================================================
 
+// Debug Configuration
+// To enable detailed logging for specific features, set the corresponding flag to true:
+// - SCALING: Shows comprehensive diagnostics for the dynamic scaling algorithm
+//   including viewport size, item measurements, scale factors, and CSS variables
+const DEBUG_FLAGS = {
+    SCALING: false  // Set to true to enable detailed scaling diagnostics
+};
+
 let combatants = [];
 let currentRound = 1;
 let initiativeHistory = [];
@@ -811,9 +819,42 @@ function adjustInitiativeOrderSize() {
     const container = initiativeOrderDiv;
     const itemCount = combatants.length;
     
+    // Create comprehensive diagnostic object (only if debugging enabled)
+    let diagnostics = null;
+    if (DEBUG_FLAGS.SCALING) {
+        diagnostics = {
+            timestamp: new Date().toISOString(),
+            trigger: 'adjustInitiativeOrderSize called',
+            timeSinceLastAdjustment: Date.now() - lastAdjustmentTime,
+            flags: {
+                isAdjustingSize,
+                hasPendingAdjustment: !!pendingAdjustment,
+                isUpdatingFromFirebase
+            },
+            viewport: {
+                windowWidth: window.innerWidth,
+                windowHeight: window.innerHeight,
+                isMobile: window.innerWidth <= 768
+            },
+            container: {
+                clientHeight: container.clientHeight,
+                scrollHeight: container.scrollHeight,
+                offsetHeight: container.offsetHeight
+            },
+            combatants: {
+                count: itemCount,
+                types: combatants.map(c => c.type)
+            }
+        };
+    }
+    
     // Prevent multiple rapid calls (debounce 500ms)
     const now = Date.now();
     if (now - lastAdjustmentTime < 500) {
+        if (DEBUG_FLAGS.SCALING) {
+            diagnostics.action = 'SKIPPED - too soon after last adjustment';
+            console.log('📊 DIAGNOSTICS:', JSON.stringify(diagnostics, null, 2));
+        }
         return;
     }
     lastAdjustmentTime = now;
@@ -823,11 +864,15 @@ function adjustInitiativeOrderSize() {
         cancelAnimationFrame(pendingAdjustment);
         pendingAdjustment = null;
         isAdjustingSize = false;
-        diagnostics.action = 'Cancelled pending adjustment';
+        if (DEBUG_FLAGS.SCALING) diagnostics.action = 'Cancelled pending adjustment';
     }
     
     // If already adjusting, skip
     if (isAdjustingSize) {
+        if (DEBUG_FLAGS.SCALING) {
+            diagnostics.action = 'SKIPPED - already adjusting';
+            console.log('📊 DIAGNOSTICS:', JSON.stringify(diagnostics, null, 2));
+        }
         return;
     }
     
@@ -844,6 +889,7 @@ function adjustInitiativeOrderSize() {
     }
     
     isAdjustingSize = true;
+    if (DEBUG_FLAGS.SCALING) diagnostics.action = 'PROCESSING';
     
     const windowWidth = window.innerWidth;
     const isMobile = windowWidth <= 768;
@@ -871,21 +917,23 @@ function adjustInitiativeOrderSize() {
         baseDragSize = 1.5;
     }
     
-    diagnostics.baseValues = {
-        baseGap, basePadding, baseMinHeight, 
-        baseNameSize, baseRollSize, baseModifierSize, 
-        baseTypeSize, baseDragSize
-    };
-    
-    // Get current CSS variable values BEFORE setting new ones
-    const computedStyle = getComputedStyle(container);
-    diagnostics.cssVariablesBefore = {
-        gap: computedStyle.getPropertyValue('--item-gap'),
-        padding: computedStyle.getPropertyValue('--item-padding'),
-        minHeight: computedStyle.getPropertyValue('--item-min-height'),
-        nameSize: computedStyle.getPropertyValue('--name-size'),
-        rollSize: computedStyle.getPropertyValue('--roll-size')
-    };
+    if (DEBUG_FLAGS.SCALING) {
+        diagnostics.baseValues = {
+            baseGap, basePadding, baseMinHeight, 
+            baseNameSize, baseRollSize, baseModifierSize, 
+            baseTypeSize, baseDragSize
+        };
+        
+        // Get current CSS variable values BEFORE setting new ones
+        const computedStyle = getComputedStyle(container);
+        diagnostics.cssVariablesBefore = {
+            gap: computedStyle.getPropertyValue('--item-gap'),
+            padding: computedStyle.getPropertyValue('--item-padding'),
+            minHeight: computedStyle.getPropertyValue('--item-min-height'),
+            nameSize: computedStyle.getPropertyValue('--name-size'),
+            rollSize: computedStyle.getPropertyValue('--roll-size')
+        };
+    }
     
     // Set base values first
     container.style.setProperty('--item-gap', baseGap + 'px');
@@ -897,6 +945,17 @@ function adjustInitiativeOrderSize() {
     container.style.setProperty('--type-size', baseTypeSize + 'em');
     container.style.setProperty('--drag-size', baseDragSize + 'em');
     
+    if (DEBUG_FLAGS.SCALING) {
+        // Get CSS variables AFTER setting to verify they took effect
+        const computedAfterSet = getComputedStyle(container);
+        diagnostics.cssVariablesAfterSet = {
+            gap: computedAfterSet.getPropertyValue('--item-gap'),
+            padding: computedAfterSet.getPropertyValue('--item-padding'),
+            minHeight: computedAfterSet.getPropertyValue('--item-min-height'),
+            nameSize: computedAfterSet.getPropertyValue('--name-size'),
+            rollSize: computedAfterSet.getPropertyValue('--roll-size')
+        };
+    }
 
     
     // CRITICAL: Force immediate DOM update by hiding and showing container
@@ -916,9 +975,19 @@ function adjustInitiativeOrderSize() {
                 // Get all initiative items
                 const items = container.querySelectorAll('.initiative-item');
         
-
+                if (DEBUG_FLAGS.SCALING) {
+                    diagnostics.measurement = {
+                        itemsFound: items.length,
+                        itemHeights: Array.from(items).map(item => item.offsetHeight),
+                        containerHeightAtMeasurement: container.clientHeight
+                    };
+                }
         
                 if (items.length === 0) {
+                    if (DEBUG_FLAGS.SCALING) {
+                        diagnostics.result = 'NO ITEMS FOUND';
+                        console.log('📊 FINAL DIAGNOSTICS:', JSON.stringify(diagnostics, null, 2));
+                    }
                     console.log('⚠️ No items found to scale');
                     isAdjustingSize = false;
                     pendingAdjustment = null;
@@ -937,10 +1006,26 @@ function adjustInitiativeOrderSize() {
                 const contentHeight = totalItemsHeight + totalGapsHeight;
                 const containerHeight = container.clientHeight;
         
-
+                if (DEBUG_FLAGS.SCALING) {
+                    diagnostics.calculation = {
+                        maxItemHeight,
+                        totalItemsHeight,
+                        currentGap,
+                        totalGapsHeight,
+                        contentHeight,
+                        containerHeight,
+                        needsScaling: contentHeight > containerHeight,
+                        contentFitsWithin: contentHeight <= containerHeight ? 'YES' : 'NO'
+                    };
+                }
         
                 // If content fits, we're done
                 if (contentHeight <= containerHeight) {
+                    if (DEBUG_FLAGS.SCALING) {
+                        diagnostics.result = 'CONTENT FITS - No scaling needed';
+                        diagnostics.scaleFactor = 1.0;
+                        console.log('📊 FINAL DIAGNOSTICS:', JSON.stringify(diagnostics, null, 2));
+                    }
                     console.log('✅ Content fits - no scaling needed');
                     isAdjustingSize = false;
                     pendingAdjustment = null;
@@ -951,8 +1036,25 @@ function adjustInitiativeOrderSize() {
                 const targetHeight = containerHeight * 0.95;
                 const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
         
-
-        
+                if (DEBUG_FLAGS.SCALING) {
+                    diagnostics.scaling = {
+                        targetHeight,
+                        targetPercentage: 0.95,
+                        scaleFactor,
+                        scaledGap: Math.max(1, Math.round(baseGap * scaleFactor)),
+                        scaledPadding: Math.max(3, Math.round(basePadding * scaleFactor)),
+                        scaledMinHeight: Math.max(25, Math.round(baseMinHeight * scaleFactor)),
+                        scaledNameSize: Math.max(0.6, baseNameSize * scaleFactor),
+                        scaledRollSize: Math.max(0.8, baseRollSize * scaleFactor)
+                    };
+                    
+                    console.log('📐 Scaling:', { 
+                        targetHeight, 
+                        scaleFactor,
+                        willScale: true,
+                        baseValues: { baseGap, basePadding, baseMinHeight }
+                    });
+                }
                 // Apply scaled values directly from BASE values (not current values)
                 const gap = Math.max(1, Math.round(baseGap * scaleFactor));
                 const padding = Math.max(3, Math.round(basePadding * scaleFactor));
@@ -967,7 +1069,12 @@ function adjustInitiativeOrderSize() {
                 container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
                 container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
         
-
+                if (DEBUG_FLAGS.SCALING) {
+                    diagnostics.result = 'SCALED';
+                    console.log('📊 FINAL DIAGNOSTICS:', JSON.stringify(diagnostics, null, 2));
+                    console.log('✅ Scaling applied');
+                }
+                
                 isAdjustingSize = false;
                 pendingAdjustment = null;
             });
