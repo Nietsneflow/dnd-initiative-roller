@@ -14,6 +14,7 @@ let isAuthenticated = false;
 let wakeLock = null;
 let isAdjustingSize = false;
 let pendingAdjustment = null;
+let lastAdjustmentTime = 0;
 
 const APP_PASSWORD = 'dnd2025'; // CHANGE THIS TO YOUR PASSWORD
 
@@ -798,19 +799,31 @@ function renderInitiativeOrder() {
     // Attach drag and drop event listeners
     attachDragListeners();
     
-    // Apply dynamic sizing based on number of items
-    adjustInitiativeOrderSize();
+    // Apply dynamic sizing - use setTimeout to ensure DOM is completely settled
+    setTimeout(() => {
+        adjustInitiativeOrderSize();
+    }, 0);
 }
+
+let isReAdjusting = false; // Prevent infinite re-adjustment loop
 
 function adjustInitiativeOrderSize() {
     const container = initiativeOrderDiv;
     const itemCount = combatants.length;
     
+    // Prevent multiple rapid calls (debounce 500ms)
+    const now = Date.now();
+    if (now - lastAdjustmentTime < 500) {
+        return;
+    }
+    lastAdjustmentTime = now;
+    
     // Cancel any pending adjustment and reset flag
     if (pendingAdjustment) {
-        clearTimeout(pendingAdjustment);
+        cancelAnimationFrame(pendingAdjustment);
         pendingAdjustment = null;
         isAdjustingSize = false;
+        diagnostics.action = 'Cancelled pending adjustment';
     }
     
     // If already adjusting, skip
@@ -858,6 +871,22 @@ function adjustInitiativeOrderSize() {
         baseDragSize = 1.5;
     }
     
+    diagnostics.baseValues = {
+        baseGap, basePadding, baseMinHeight, 
+        baseNameSize, baseRollSize, baseModifierSize, 
+        baseTypeSize, baseDragSize
+    };
+    
+    // Get current CSS variable values BEFORE setting new ones
+    const computedStyle = getComputedStyle(container);
+    diagnostics.cssVariablesBefore = {
+        gap: computedStyle.getPropertyValue('--item-gap'),
+        padding: computedStyle.getPropertyValue('--item-padding'),
+        minHeight: computedStyle.getPropertyValue('--item-min-height'),
+        nameSize: computedStyle.getPropertyValue('--name-size'),
+        rollSize: computedStyle.getPropertyValue('--roll-size')
+    };
+    
     // Set base values first
     container.style.setProperty('--item-gap', baseGap + 'px');
     container.style.setProperty('--item-padding', basePadding + 'px');
@@ -868,75 +897,82 @@ function adjustInitiativeOrderSize() {
     container.style.setProperty('--type-size', baseTypeSize + 'em');
     container.style.setProperty('--drag-size', baseDragSize + 'em');
     
-    // Force complete layout cycle before measuring
-    pendingAdjustment = setTimeout(() => {
-        console.log('🔍 adjustInitiativeOrderSize: Starting measurement');
-        // Force reflow
-        void container.offsetHeight;
+
+    
+    // CRITICAL: Force immediate DOM update by hiding and showing container
+    // This ensures items re-render with new CSS variables
+    const originalDisplay = container.style.display;
+    container.style.display = 'none';
+    void container.offsetHeight; // Force reflow
+    container.style.display = originalDisplay;
+    
+    // Now use triple RAF to ensure rendering is complete AFTER forced re-render
+    pendingAdjustment = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                // Force another reflow
+                void container.offsetHeight;
         
-        // Get all initiative items
-        const items = container.querySelectorAll('.initiative-item');
+                // Get all initiative items
+                const items = container.querySelectorAll('.initiative-item');
         
-        if (items.length === 0) {
-            console.log('⚠️ No items found');
-            isAdjustingSize = false;
-            pendingAdjustment = null;
-            return;
-        }
+
         
-        // Calculate actual total height needed (sum of all items + gaps)
-        let totalItemsHeight = 0;
-        items.forEach(item => {
-            totalItemsHeight += item.offsetHeight;
+                if (items.length === 0) {
+                    console.log('⚠️ No items found to scale');
+                    isAdjustingSize = false;
+                    pendingAdjustment = null;
+                    return;
+                }
+        
+                // Calculate actual total height needed
+                // Use the MAXIMUM item height and assume all items will be that height
+                // This handles the case where bottom items haven't updated with new CSS variables yet
+                const maxItemHeight = Math.max(...Array.from(items).map(item => item.offsetHeight));
+                const totalItemsHeight = maxItemHeight * items.length;
+        
+                // Add gaps between items
+                const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
+                const totalGapsHeight = currentGap * (items.length - 1);
+                const contentHeight = totalItemsHeight + totalGapsHeight;
+                const containerHeight = container.clientHeight;
+        
+
+        
+                // If content fits, we're done
+                if (contentHeight <= containerHeight) {
+                    console.log('✅ Content fits - no scaling needed');
+                    isAdjustingSize = false;
+                    pendingAdjustment = null;
+                    return;
+                }
+        
+                // Calculate scale factor - need to fit within 95% of container to avoid scrollbar
+                const targetHeight = containerHeight * 0.95;
+                const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
+        
+
+        
+                // Apply scaled values directly from BASE values (not current values)
+                const gap = Math.max(1, Math.round(baseGap * scaleFactor));
+                const padding = Math.max(3, Math.round(basePadding * scaleFactor));
+                const minHeight = Math.max(25, Math.round(baseMinHeight * scaleFactor));
+        
+                container.style.setProperty('--item-gap', gap + 'px');
+                container.style.setProperty('--item-padding', padding + 'px');
+                container.style.setProperty('--item-min-height', minHeight + 'px');
+                container.style.setProperty('--name-size', Math.max(0.6, baseNameSize * scaleFactor) + 'em');
+                container.style.setProperty('--roll-size', Math.max(0.8, baseRollSize * scaleFactor) + 'em');
+                container.style.setProperty('--modifier-size', Math.max(0.5, baseModifierSize * scaleFactor) + 'em');
+                container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
+                container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
+        
+
+                isAdjustingSize = false;
+                pendingAdjustment = null;
+            });
         });
-        
-        // Add gaps between items
-        const currentGap = parseInt(getComputedStyle(container).gap) || baseGap;
-        const totalGapsHeight = currentGap * (items.length - 1);
-        const contentHeight = totalItemsHeight + totalGapsHeight;
-        const containerHeight = container.clientHeight;
-        
-        console.log('📊 Measurements:', {
-            itemCount: items.length,
-            totalItemsHeight,
-            totalGapsHeight,
-            contentHeight,
-            containerHeight,
-            needsScaling: contentHeight > containerHeight
-        });
-        
-        // If content fits, we're done
-        if (contentHeight <= containerHeight) {
-            console.log('✅ Content fits, no scaling needed');
-            isAdjustingSize = false;
-            pendingAdjustment = null;
-            return;
-        }
-        
-        // Calculate scale factor - need to fit within 95% of container to avoid scrollbar
-        const targetHeight = containerHeight * 0.95;
-        const scaleFactor = Math.max(0.3, targetHeight / contentHeight);
-        
-        console.log('📐 Scaling:', { targetHeight, scaleFactor });
-        
-        // Apply scaled values directly from BASE values (not current values)
-        const gap = Math.max(1, Math.round(baseGap * scaleFactor));
-        const padding = Math.max(3, Math.round(basePadding * scaleFactor));
-        const minHeight = Math.max(25, Math.round(baseMinHeight * scaleFactor));
-        
-        container.style.setProperty('--item-gap', gap + 'px');
-        container.style.setProperty('--item-padding', padding + 'px');
-        container.style.setProperty('--item-min-height', minHeight + 'px');
-        container.style.setProperty('--name-size', Math.max(0.6, baseNameSize * scaleFactor) + 'em');
-        container.style.setProperty('--roll-size', Math.max(0.8, baseRollSize * scaleFactor) + 'em');
-        container.style.setProperty('--modifier-size', Math.max(0.5, baseModifierSize * scaleFactor) + 'em');
-        container.style.setProperty('--type-size', Math.max(0.4, baseTypeSize * scaleFactor) + 'em');
-        container.style.setProperty('--drag-size', Math.max(0.5, baseDragSize * scaleFactor) + 'em');
-        
-        console.log('✅ Scaling applied');
-        isAdjustingSize = false;
-        pendingAdjustment = null;
-    }, 100);
+    });
 }
 
 function attemptFit(container, baseGap, basePadding, baseMinHeight, baseNameSize, baseRollSize, baseModifierSize, baseTypeSize, baseDragSize, isMobile, iteration = 0) {
