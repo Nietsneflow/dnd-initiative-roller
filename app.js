@@ -556,6 +556,9 @@ function addCombatant() {
         modifier: modifier,
         type: type,
         advantage: advantage,
+        lucky: null,
+        luckyReroll: null,
+        luckyUsed: false,
         initiative: 0,
         manualOrder: null,
         wasMoved: false,
@@ -639,6 +642,9 @@ function duplicateCombatant(id) {
         modifier: combatant.modifier || 0,
         type: combatant.type,
         advantage: combatant.advantage,
+        lucky: null,
+        luckyReroll: null,
+        luckyUsed: false,
         initiative: 0,
         manualOrder: null,
         wasMoved: false,
@@ -663,6 +669,8 @@ function rollD20() {
 function rollAllInitiative() {
     combatants.forEach(combatant => {
         let roll;
+        let luckyReroll = null; // Track if Lucky - H was used
+        
         if (combatant.advantage === 'advantage') {
             const roll1 = rollD20();
             const roll2 = rollD20();
@@ -677,6 +685,14 @@ function rollAllInitiative() {
             roll = rollD20();
             combatant.rolls = [roll];
         }
+        
+        // Lucky - H (Halfling): Auto-reroll 1s
+        if (combatant.lucky === 'halfling' && roll === 1) {
+            luckyReroll = roll; // Store the original 1
+            roll = rollD20(); // Reroll
+            combatant.rolls = [luckyReroll, roll]; // Show both rolls
+        }
+        
         // Calculate initiative bonus (dex + modifier)
         const dex = combatant.dex || 0;
         const modifier = combatant.modifier || 0;
@@ -685,6 +701,8 @@ function rollAllInitiative() {
         combatant.initiative = roll + initiativeBonus;
         combatant.baseRoll = roll;
         combatant.initiativeBonus = initiativeBonus; // Store for display
+        combatant.luckyReroll = luckyReroll; // Store if Lucky - H was used
+        combatant.luckyUsed = false; // Reset Lucky - F usage for new round
         combatant.manualOrder = null; // Reset manual ordering on re-roll
         combatant.wasMoved = false; // Reset moved indicator
         combatant.moveDirection = null; // Reset move direction
@@ -718,6 +736,9 @@ function saveToHistory() {
             baseRoll: c.baseRoll,
             advantage: c.advantage,
             rolls: c.rolls,
+            lucky: c.lucky ?? null,
+            luckyReroll: c.luckyReroll ?? null,
+            luckyUsed: c.luckyUsed ?? false,
             manualOrder: c.manualOrder ?? null,
             wasMoved: c.wasMoved ?? false,
             moveDirection: c.moveDirection ?? null
@@ -778,7 +799,11 @@ function renderInitiativeOrder() {
         const bonus = dex + modifier;
         
         let rollDisplay = '';
-        if (combatant.advantage === 'advantage') {
+        if (combatant.luckyReroll !== null && combatant.luckyReroll !== undefined) {
+            // Lucky was used (either Halfling or Feat)
+            const luckyType = combatant.lucky === 'halfling' ? 'Lucky (Halfling)' : 'Lucky (Feat)';
+            rollDisplay = `<span class="lucky-halfling-indicator" title="${luckyType} activated">${luckyType}: ${combatant.luckyReroll} → ${combatant.baseRoll}</span> + ${dex} dex + ${modifier} mod`;
+        } else if (combatant.advantage === 'advantage') {
             rollDisplay = `[${combatant.rolls.join(', ')}] ${combatant.baseRoll} roll + ${dex} dex + ${modifier} mod`;
         } else if (combatant.advantage === 'disadvantage') {
             rollDisplay = `[${combatant.rolls.join(', ')}] ${combatant.baseRoll} roll + ${dex} dex + ${modifier} mod`;
@@ -788,6 +813,18 @@ function renderInitiativeOrder() {
         
         const movedIndicator = combatant.wasMoved ? 
             `<span class="moved-indicator" title="Manually moved ${combatant.moveDirection}">${combatant.moveDirection === 'down' ? '↓' : '↑'}</span>` : '';
+        
+        // Lucky - F reroll button (only for party/friendly with Lucky - F who rolled a 1 and haven't used it)
+        const showLuckyFeatButton = (combatant.type === 'party' || combatant.type === 'friendly') && 
+                                     combatant.lucky === 'feat' && 
+                                     combatant.baseRoll === 1 && 
+                                     !combatant.luckyUsed;
+        const luckyFeatButton = showLuckyFeatButton ?
+            `<button class="btn-lucky-reroll" 
+                     onclick="rerollLuckyFeat(${combatant.id})" 
+                     title="Use Lucky feat to reroll">
+                🍀 Lucky
+            </button>` : '';
         
         return `
             <div class="initiative-item ${combatant.type}" draggable="true" data-id="${combatant.id}" data-index="${index}">
@@ -799,7 +836,10 @@ function renderInitiativeOrder() {
                         <span class="combatant-modifier">${rollDisplay}</span>
                     </div>
                 </div>
-                <span class="combatant-type ${combatant.type}">${combatant.type}</span>
+                <div class="initiative-actions">
+                    ${luckyFeatButton}
+                    <span class="combatant-type ${combatant.type}">${combatant.type}</span>
+                </div>
             </div>
         `;
     }).join('');
@@ -1113,10 +1153,18 @@ function renderCombatantLists() {
             const bonusSign = bonus >= 0 ? '+' : '';
             const modSign = modifier >= 0 ? '+' : '';
             
+            // Lucky indicator
+            let luckyBadge = '';
+            if (combatant.lucky === 'halfling') {
+                luckyBadge = '<span class="lucky-badge halfling" title="Lucky (Halfling): Auto-reroll 1s">🍀 Lucky-H</span>';
+            } else if (combatant.lucky === 'feat') {
+                luckyBadge = '<span class="lucky-badge feat" title="Lucky (Feat): Manual reroll">🍀 Lucky-F</span>';
+            }
+            
             return `
                 <div class="combatant-card party">
                     <div class="combatant-card-info">
-                        <div class="combatant-card-name">${combatant.name}</div>
+                        <div class="combatant-card-name">${combatant.name} ${luckyBadge}</div>
                         <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
                         <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
                     </div>
@@ -1189,10 +1237,18 @@ function renderCombatantLists() {
             const bonusSign = bonus >= 0 ? '+' : '';
             const modSign = modifier >= 0 ? '+' : '';
             
+            // Lucky indicator
+            let luckyBadge = '';
+            if (combatant.lucky === 'halfling') {
+                luckyBadge = '<span class="lucky-badge halfling" title="Lucky (Halfling): Auto-reroll 1s">🍀 Lucky-H</span>';
+            } else if (combatant.lucky === 'feat') {
+                luckyBadge = '<span class="lucky-badge feat" title="Lucky (Feat): Manual reroll">🍀 Lucky-F</span>';
+            }
+            
             return `
                 <div class="combatant-card friendly">
                     <div class="combatant-card-info">
-                        <div class="combatant-card-name">${combatant.name}</div>
+                        <div class="combatant-card-name">${combatant.name} ${luckyBadge}</div>
                         <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
                         <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
                     </div>
@@ -1452,6 +1508,9 @@ function loadFromFirebase() {
                     ...c,
                     dex: c.dex ?? 0, // Default to 0 for old data
                     modifier: c.modifier ?? 0, // Default to 0 if missing
+                    lucky: c.lucky ?? null, // Default to null if missing
+                    luckyReroll: c.luckyReroll ?? null, // Default to null if missing
+                    luckyUsed: c.luckyUsed ?? false, // Default to false if missing
                     manualOrder: c.manualOrder ?? null,
                     wasMoved: c.wasMoved ?? false,
                     moveDirection: c.moveDirection ?? null,
@@ -1539,6 +1598,7 @@ function showAddEditPartyModal(combatantId = null) {
     const modifierInput = document.getElementById('partyMemberModifier');
     const typeSelect = document.getElementById('partyMemberType');
     const advantageSelect = document.getElementById('partyMemberAdvantage');
+    const luckySelect = document.getElementById('partyMemberLucky');
     const saveBtn = document.getElementById('savePartyMemberBtn');
     
     if (combatantId) {
@@ -1553,6 +1613,7 @@ function showAddEditPartyModal(combatantId = null) {
         modifierInput.value = combatant.modifier || 0;
         typeSelect.value = combatant.type;
         advantageSelect.value = combatant.advantage || 'normal';
+        luckySelect.value = combatant.lucky || 'none';
         saveBtn.textContent = 'Update';
     } else {
         // Add mode
@@ -1563,6 +1624,7 @@ function showAddEditPartyModal(combatantId = null) {
         modifierInput.value = '0';
         typeSelect.value = 'party';
         advantageSelect.value = 'normal';
+        luckySelect.value = 'none';
         saveBtn.textContent = 'Add';
     }
     
@@ -1582,6 +1644,7 @@ function savePartyMember() {
     const modifier = parseInt(document.getElementById('partyMemberModifier').value) || 0;
     const type = document.getElementById('partyMemberType').value;
     const advantage = document.getElementById('partyMemberAdvantage').value;
+    const lucky = document.getElementById('partyMemberLucky').value;
     
     if (!name) {
         alert('Please enter a name');
@@ -1597,6 +1660,8 @@ function savePartyMember() {
             combatant.modifier = modifier;
             combatant.type = type;
             combatant.advantage = advantage;
+            combatant.lucky = lucky === 'none' ? null : lucky;
+            combatant.luckyUsed = false; // Reset lucky usage when editing
         }
     } else {
         // Add new combatant
@@ -1607,6 +1672,8 @@ function savePartyMember() {
             modifier: modifier,
             type: type,
             advantage: advantage,
+            lucky: lucky === 'none' ? null : lucky,
+            luckyUsed: false,
             initiative: 0,
             manualOrder: null,
             wasMoved: false,
@@ -1624,6 +1691,62 @@ function savePartyMember() {
 
 function editPartyMember(id) {
     showAddEditPartyModal(id);
+}
+
+// ============================================================================
+// LUCKY FEAT REROLL
+// ============================================================================
+
+function rerollLuckyFeat(id) {
+    const combatant = combatants.find(c => c.id === id);
+    if (!combatant || combatant.lucky !== 'feat' || combatant.luckyUsed || combatant.baseRoll !== 1) {
+        return;
+    }
+    
+    if (!confirm(`Use Lucky feat to reroll ${combatant.name}'s initiative?\n\nThis can only be used once per round.`)) {
+        return;
+    }
+    
+    // Store the original roll (which was a 1)
+    const originalRoll = combatant.baseRoll;
+    
+    // Perform the reroll
+    let roll;
+    if (combatant.advantage === 'advantage') {
+        const roll1 = rollD20();
+        const roll2 = rollD20();
+        roll = Math.max(roll1, roll2);
+        combatant.rolls = [roll1, roll2];
+    } else if (combatant.advantage === 'disadvantage') {
+        const roll1 = rollD20();
+        const roll2 = rollD20();
+        roll = Math.min(roll1, roll2);
+        combatant.rolls = [roll1, roll2];
+    } else {
+        roll = rollD20();
+        combatant.rolls = [roll];
+    }
+    
+    // Calculate new initiative
+    const dex = combatant.dex || 0;
+    const modifier = combatant.modifier || 0;
+    const initiativeBonus = dex + modifier;
+    
+    combatant.initiative = roll + initiativeBonus;
+    combatant.baseRoll = roll;
+    combatant.luckyUsed = true;
+    combatant.luckyReroll = originalRoll; // Store original 1 to display like halfling lucky
+    
+    // Re-sort and update original indices
+    const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
+    sorted.forEach((c, index) => {
+        c.originalIndex = index;
+    });
+    
+    // Save to history and Firebase
+    saveToHistory();
+    saveToFirebase();
+    renderInitiativeOrder();
 }
 
 // ============================================================================
