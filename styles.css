@@ -1567,7 +1567,6 @@ body[data-theme="light"] .btn-primary {
 }
 
 body[data-theme="light"] .initiative-item {
-    background: #f8f9fa;
     border-left-color: #667eea;
 }
 
@@ -1576,17 +1575,17 @@ body[data-theme="light"] .initiative-item:hover {
 }
 
 body[data-theme="light"] .initiative-item.enemy {
-    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%) !important;
     border-left-color: var(--color-enemy);
 }
 
 body[data-theme="light"] .initiative-item.party {
-    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%) !important;
     border-left-color: var(--color-party);
 }
 
 body[data-theme="light"] .initiative-item.friendly {
-    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
     border-left-color: var(--color-friendly);
 }
 
@@ -1653,8 +1652,22 @@ body[data-theme="light"] .form-row select:focus {
 }
 
 body[data-theme="light"] .combatant-card {
-    background: white;
     border-left-color: #667eea;
+}
+
+body[data-theme="light"] .combatant-card.party {
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%) !important;
+    border-left-color: var(--color-party);
+}
+
+body[data-theme="light"] .combatant-card.enemy {
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%) !important;
+    border-left-color: var(--color-enemy);
+}
+
+body[data-theme="light"] .combatant-card.friendly {
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
+    border-left-color: var(--color-friendly);
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-name {
@@ -1758,22 +1771,21 @@ body[data-theme="light"] .history-header small {
 }
 
 body[data-theme="light"] .history-item {
-    background: #f8f9fa;
     border-left-color: #667eea;
 }
 
 body[data-theme="light"] .history-item.party {
-    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%) !important;
     border-left-color: var(--color-party);
 }
 
 body[data-theme="light"] .history-item.enemy {
-    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%) !important;
     border-left-color: var(--color-enemy);
 }
 
 body[data-theme="light"] .history-item.friendly {
-    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
     border-left-color: var(--color-friendly);
 }
 
