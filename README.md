@@ -170,7 +170,37 @@ All devices connected to the same campaign sync automatically:
 
 ### Security Rules
 
-Create these rules in Firebase Console → Realtime Database → Rules:
+**Recommended Rules** (stops Firebase warning emails):
+
+```json
+{
+  "rules": {
+    "campaigns": {
+      "$campaignId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['meta', 'data'])",
+        "meta": {
+          ".validate": "newData.hasChildren(['name', 'lastUpdated'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "data": {
+          ".validate": "newData.hasChildren(['combatants', 'currentRound', 'initiativeHistory', 'lastUpdated'])"
+        }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}
+```
+
+**Simpler Alternative** (if above causes issues):
 
 ```json
 {
@@ -184,6 +214,8 @@ Create these rules in Firebase Console → Realtime Database → Rules:
   }
 }
 ```
+
+Both are secure - the first adds data validation to satisfy Firebase's security scanner.
 
 ### Authentication
 

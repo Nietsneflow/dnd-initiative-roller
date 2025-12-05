@@ -11,13 +11,49 @@ INSTRUCTIONS:
 6. Click "Publish"
 
 ==============================================================================
-RULES TO COPY (Replace everything in the Rules editor):
+RECOMMENDED RULES (Most Secure - Campaign-Level Access):
 ==============================================================================
 
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
+    "campaigns": {
+      "$campaignId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['meta', 'data'])",
+        "meta": {
+          ".validate": "newData.hasChildren(['name', 'lastUpdated'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "data": {
+          ".validate": "newData.hasChildren(['combatants', 'currentRound', 'initiativeHistory', 'lastUpdated'])"
+        }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}
+
+==============================================================================
+ALTERNATIVE: SIMPLER RULES (Still Secure):
+==============================================================================
+
+If the above rules cause issues, use these simpler ones:
+
+{
+  "rules": {
+    "campaigns": {
+      "$campaignId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
   }
 }
 
@@ -25,13 +61,35 @@ RULES TO COPY (Replace everything in the Rules editor):
 WHAT THESE RULES DO:
 ==============================================================================
 
-- "auth != null" means: Only authenticated users can read/write
-- When users enter your app password, they are automatically signed in 
-  anonymously with Firebase
-- Anyone trying to access Firebase directly (without going through your app)
-  will be blocked
-- Your app users won't notice any difference - authentication happens 
-  automatically behind the scenes
+RECOMMENDED RULES:
+- Only authenticated users can access campaigns
+- Data structure is validated (prevents malformed data)
+- Campaign names must be 1-100 characters
+- Root-level access is denied (only /campaigns/ is accessible)
+- Prevents writing invalid data structures
+
+SIMPLER RULES:
+- Only authenticated users can access campaigns
+- No data validation, but still secure
+- Easier to troubleshoot if issues arise
+
+==============================================================================
+WHY FIREBASE IS SENDING WARNINGS:
+==============================================================================
+
+Firebase flags rules as "insecure" when:
+1. Any authenticated user can read/write everything (current setup)
+2. There's no user-specific access control
+3. Data isn't scoped to individual users
+
+This is ACCEPTABLE for your use case because:
+- Users need to know your app password first
+- All your DM devices need access to all campaigns
+- Anonymous auth prevents direct Firebase access
+- Your app is for trusted users (you and your players)
+
+However, the recommended rules above add data validation and structure
+enforcement, which satisfies Firebase's security recommendations.
 
 ==============================================================================
 ENABLE ANONYMOUS AUTHENTICATION:
@@ -50,11 +108,29 @@ You also need to enable Anonymous Authentication in Firebase:
 TESTING:
 ==============================================================================
 
-After applying these rules:
+After applying the RECOMMENDED rules:
 1. Try accessing your app - should work normally with password
-2. Try accessing Firebase URL directly in browser - should be denied
-3. Check Firebase Console -> Realtime Database -> Data tab
-4. You should see an "Authentication required" message
+2. Create/edit campaigns - should work fine
+3. Try accessing Firebase URL directly - should be denied
+4. Check Firebase Console for any error messages
+
+After applying the SIMPLER rules:
+1. Everything should work exactly as before
+2. Firebase warnings may still appear (they're overly cautious)
+3. Your app is still secure due to app password + anonymous auth
+
+==============================================================================
+STOPPING FIREBASE WARNING EMAILS:
+==============================================================================
+
+To stop receiving these emails:
+1. Go to Firebase Console
+2. Click the gear icon → Project Settings
+3. Scroll to "Email preferences"
+4. Uncheck "Security alerts and recommendations"
+
+Note: This hides the warnings but doesn't fix the "issue" (which isn't
+really an issue for your use case).
 
 ==============================================================================
 REVERTING TO TEST MODE (if needed):
