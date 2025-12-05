@@ -234,43 +234,17 @@ body[data-vision="normal"] {
     --color-friendly-bg-end: #2d6a7a;
 }
 
-/* Protanopia (Red-Blind) - Blue/Orange/Purple */
-body[data-vision="protanopia"] {
-    --color-party: #0173B2;      /* Blue for party */
-    --color-enemy: #DE8F05;      /* Orange for enemy */
-    --color-friendly: #CC78BC;   /* Purple for friendly */
-    --color-party-bg-start: #1a4a6a;
-    --color-party-bg-end: #2d6080;
-    --color-enemy-bg-start: #5d4a1a;
-    --color-enemy-bg-end: #7a602d;
-    --color-friendly-bg-start: #5d2d5d;
-    --color-friendly-bg-end: #7a4a7a;
-}
-
-/* Deuteranopia (Green-Blind) - Blue/Orange/Purple */
-body[data-vision="deuteranopia"] {
-    --color-party: #0173B2;      /* Blue for party */
-    --color-enemy: #DE8F05;      /* Orange for enemy */
-    --color-friendly: #CC78BC;   /* Purple for friendly */
-    --color-party-bg-start: #1a4a6a;
-    --color-party-bg-end: #2d6080;
-    --color-enemy-bg-start: #5d4a1a;
-    --color-enemy-bg-end: #7a602d;
-    --color-friendly-bg-start: #5d2d5d;
-    --color-friendly-bg-end: #7a4a7a;
-}
-
-/* Tritanopia (Blue-Blind) - Red/Teal/Pink */
-body[data-vision="tritanopia"] {
-    --color-party: #009E73;      /* Teal for party */
-    --color-enemy: #D55E00;      /* Red for enemy */
-    --color-friendly: #CC79A7;   /* Pink for friendly */
-    --color-party-bg-start: #1a5d4a;
-    --color-party-bg-end: #2d7a60;
-    --color-enemy-bg-start: #5d2d1a;
-    --color-enemy-bg-end: #7a4a2d;
-    --color-friendly-bg-start: #5d2d4a;
-    --color-friendly-bg-end: #7a4a60;
+/* Colorblind Mode - Blue/Teal/Yellow */
+body[data-vision="colorblind"] {
+    --color-party: #1E88E5;      /* Vibrant blue for party */
+    --color-enemy: #004D40;      /* Dark teal for enemy */
+    --color-friendly: #FFC107;   /* Vibrant yellow for friendly */
+    --color-party-bg-start: #1565C0;
+    --color-party-bg-end: #1E88E5;
+    --color-enemy-bg-start: #003D33;
+    --color-enemy-bg-end: #004D40;
+    --color-friendly-bg-start: #FFB300;
+    --color-friendly-bg-end: #FFC107;
 }
 
 /* Light Theme Colorblind Mode Overrides */
@@ -286,40 +260,16 @@ body[data-theme="light"][data-vision="normal"] {
     --color-friendly-bg-end: #2bb3cc;
 }
 
-body[data-theme="light"][data-vision="protanopia"] {
-    --color-party: #0173B2;
-    --color-enemy: #DE8F05;
-    --color-friendly: #CC78BC;
-    --color-party-bg-start: #5bb3e0;
-    --color-party-bg-end: #2a9fd6;
-    --color-enemy-bg-start: #ffbe5c;
-    --color-enemy-bg-end: #ffad33;
-    --color-friendly-bg-start: #da9dce;
-    --color-friendly-bg-end: #d080c4;
-}
-
-body[data-theme="light"][data-vision="deuteranopia"] {
-    --color-party: #0173B2;
-    --color-enemy: #DE8F05;
-    --color-friendly: #CC78BC;
-    --color-party-bg-start: #5bb3e0;
-    --color-party-bg-end: #2a9fd6;
-    --color-enemy-bg-start: #ffbe5c;
-    --color-enemy-bg-end: #ffad33;
-    --color-friendly-bg-start: #da9dce;
-    --color-friendly-bg-end: #d080c4;
-}
-
-body[data-theme="light"][data-vision="tritanopia"] {
-    --color-party: #009E73;
-    --color-enemy: #D55E00;
-    --color-friendly: #CC79A7;
-    --color-party-bg-start: #52c18f;
-    --color-party-bg-end: #2dad76;
-    --color-enemy-bg-start: #ff9e52;
-    --color-enemy-bg-end: #ff8729;
-    --color-friendly-bg-start: #ed7db3;
-    --color-friendly-bg-end: #e95fa0;
+body[data-theme="light"][data-vision="colorblind"] {
+    --color-party: #1E88E5;
+    --color-enemy: #004D40;
+    --color-friendly: #FFC107;
+    --color-party-bg-start: #42A5F5;
+    --color-party-bg-end: #1E88E5;
+    --color-enemy-bg-start: #00695C;
+    --color-enemy-bg-end: #004D40;
+    --color-friendly-bg-start: #FFD54F;
+    --color-friendly-bg-end: #FFC107;
 }
 
 .header-center {
@@ -502,6 +452,11 @@ h1 {
     background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
 }
 
+body[data-vision="colorblind"] .initiative-item.friendly .combatant-name,
+body[data-vision="colorblind"] .initiative-item.friendly .combatant-modifier {
+    color: #2c2c2c !important;
+}
+
 .initiative-info {
     display: flex;
     align-items: center;
@@ -574,6 +529,7 @@ h1 {
     font-size: var(--type-size, 1.1em);
     font-weight: 600;
     text-transform: uppercase;
+    border: 2px solid #000;
 }
 
 .combatant-type.party {
@@ -589,6 +545,10 @@ h1 {
 .combatant-type.friendly {
     background: var(--color-friendly);
     color: white;
+}
+
+body[data-vision="colorblind"] .combatant-type.friendly {
+    color: #2c2c2c;
 }
 
 /* Lucky Feature Styles */
@@ -773,14 +733,23 @@ h1 {
 
 .combatant-card.enemy {
     border-left-color: var(--color-enemy);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
 }
 
 .combatant-card.party {
     border-left-color: var(--color-party);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
 }
 
 .combatant-card.friendly {
     border-left-color: var(--color-friendly);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
+}
+
+body[data-vision="colorblind"] .combatant-card.friendly .combatant-card-name,
+body[data-vision="colorblind"] .combatant-card.friendly .combatant-card-details,
+body[data-vision="colorblind"] .combatant-card.friendly .combatant-card-details strong {
+    color: #2c2c2c !important;
 }
 
 .combatant-card-info {
@@ -1145,6 +1114,11 @@ h1 {
     background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
 }
 
+body[data-vision="colorblind"] .history-item.friendly .history-name,
+body[data-vision="colorblind"] .history-item.friendly .history-calc {
+    color: #2c2c2c !important;
+}
+
 .history-roll {
     font-size: 1.5em;
     font-weight: bold;
@@ -1181,6 +1155,7 @@ h1 {
     font-size: 0.75em;
     font-weight: 600;
     text-transform: uppercase;
+    border: 2px solid #000;
 }
 
 .history-type.party {
@@ -1196,6 +1171,10 @@ h1 {
 .history-type.friendly {
     background: var(--color-friendly);
     color: white;
+}
+
+body[data-vision="colorblind"] .history-type.friendly {
+    color: #2c2c2c;
 }
 
 /* Campaign Management Styles */
@@ -1589,6 +1568,11 @@ body[data-theme="light"] .initiative-item.friendly {
     border-left-color: var(--color-friendly);
 }
 
+body[data-theme="light"][data-vision="colorblind"] .initiative-item.friendly .combatant-name,
+body[data-theme="light"][data-vision="colorblind"] .initiative-item.friendly .combatant-modifier {
+    color: #2c2c2c !important;
+}
+
 body[data-theme="light"] .initiative-item.drag-over {
     border-top-color: #667eea;
 }
@@ -1598,7 +1582,7 @@ body[data-theme="light"] .drag-handle {
 }
 
 body[data-theme="light"] .initiative-roll {
-    background: white;
+    background: #D8CAA8;
     color: #667eea;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -1609,6 +1593,10 @@ body[data-theme="light"] .combatant-name {
 
 body[data-theme="light"] .combatant-modifier {
     color: #666;
+}
+
+body[data-theme="light"] .initiative-item.enemy .combatant-modifier {
+    color: #ccc;
 }
 
 body[data-theme="light"] .lucky-halfling-indicator {
@@ -1668,6 +1656,12 @@ body[data-theme="light"] .combatant-card.enemy {
 body[data-theme="light"] .combatant-card.friendly {
     background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
     border-left-color: var(--color-friendly);
+}
+
+body[data-theme="light"][data-vision="colorblind"] .combatant-card.friendly .combatant-card-name,
+body[data-theme="light"][data-vision="colorblind"] .combatant-card.friendly .combatant-card-details,
+body[data-theme="light"][data-vision="colorblind"] .combatant-card.friendly .combatant-card-details strong {
+    color: #2c2c2c !important;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-name {
@@ -1784,13 +1778,22 @@ body[data-theme="light"] .history-item.enemy {
     border-left-color: var(--color-enemy);
 }
 
+body[data-theme="light"] .history-item.enemy .history-calc {
+    color: #ccc;
+}
+
 body[data-theme="light"] .history-item.friendly {
     background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
     border-left-color: var(--color-friendly);
 }
 
+body[data-theme="light"][data-vision="colorblind"] .history-item.friendly .history-name,
+body[data-theme="light"][data-vision="colorblind"] .history-item.friendly .history-calc {
+    color: #2c2c2c !important;
+}
+
 body[data-theme="light"] .history-roll {
-    background: white;
+    background: #D8CAA8;
     color: #667eea;
 }
 
