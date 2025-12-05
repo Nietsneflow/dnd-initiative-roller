@@ -226,12 +226,12 @@ body[data-vision="normal"] {
     --color-party: #28a745;
     --color-enemy: #dc3545;
     --color-friendly: #17a2b8;
-    --color-party-bg-start: #2d3d2d;
-    --color-party-bg-end: #3a4a3a;
-    --color-enemy-bg-start: #3d2d2d;
-    --color-enemy-bg-end: #4a3a3a;
-    --color-friendly-bg-start: #2d3d3d;
-    --color-friendly-bg-end: #3a4a4a;
+    --color-party-bg-start: #3d4d3d;
+    --color-party-bg-end: #4a5a4a;
+    --color-enemy-bg-start: #4d3d3d;
+    --color-enemy-bg-end: #5a4a4a;
+    --color-friendly-bg-start: #3d4d4d;
+    --color-friendly-bg-end: #4a5a5a;
 }
 
 /* Protanopia (Red-Blind) - Blue/Orange/Purple */
@@ -239,12 +239,12 @@ body[data-vision="protanopia"] {
     --color-party: #0173B2;      /* Blue for party */
     --color-enemy: #DE8F05;      /* Orange for enemy */
     --color-friendly: #CC78BC;   /* Purple for friendly */
-    --color-party-bg-start: #2d3540;
-    --color-party-bg-end: #3a4450;
-    --color-enemy-bg-start: #3d3520;
-    --color-enemy-bg-end: #4a4230;
-    --color-friendly-bg-start: #3d2d3d;
-    --color-friendly-bg-end: #4a3a4a;
+    --color-party-bg-start: #3d4550;
+    --color-party-bg-end: #4a5260;
+    --color-enemy-bg-start: #4d4530;
+    --color-enemy-bg-end: #5a5240;
+    --color-friendly-bg-start: #4d3d4d;
+    --color-friendly-bg-end: #5a4a5a;
 }
 
 /* Deuteranopia (Green-Blind) - Blue/Orange/Purple */
@@ -252,12 +252,12 @@ body[data-vision="deuteranopia"] {
     --color-party: #0173B2;      /* Blue for party */
     --color-enemy: #DE8F05;      /* Orange for enemy */
     --color-friendly: #CC78BC;   /* Purple for friendly */
-    --color-party-bg-start: #2d3540;
-    --color-party-bg-end: #3a4450;
-    --color-enemy-bg-start: #3d3520;
-    --color-enemy-bg-end: #4a4230;
-    --color-friendly-bg-start: #3d2d3d;
-    --color-friendly-bg-end: #4a3a4a;
+    --color-party-bg-start: #3d4550;
+    --color-party-bg-end: #4a5260;
+    --color-enemy-bg-start: #4d4530;
+    --color-enemy-bg-end: #5a5240;
+    --color-friendly-bg-start: #4d3d4d;
+    --color-friendly-bg-end: #5a4a5a;
 }
 
 /* Tritanopia (Blue-Blind) - Red/Teal/Pink */
@@ -265,12 +265,12 @@ body[data-vision="tritanopia"] {
     --color-party: #009E73;      /* Teal for party */
     --color-enemy: #D55E00;      /* Red for enemy */
     --color-friendly: #CC79A7;   /* Pink for friendly */
-    --color-party-bg-start: #2d3d38;
-    --color-party-bg-end: #3a4a45;
-    --color-enemy-bg-start: #3d2d20;
-    --color-enemy-bg-end: #4a3a30;
-    --color-friendly-bg-start: #3d2d38;
-    --color-friendly-bg-end: #4a3a45;
+    --color-party-bg-start: #3d4d48;
+    --color-party-bg-end: #4a5a55;
+    --color-enemy-bg-start: #4d3d30;
+    --color-enemy-bg-end: #5a4a40;
+    --color-friendly-bg-start: #4d3d48;
+    --color-friendly-bg-end: #5a4a55;
 }
 
 /* Light Theme Colorblind Mode Overrides */
