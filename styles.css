@@ -179,6 +179,149 @@ header {
     border-color: #7c3aed;
 }
 
+/* Colorblind Mode Menu */
+.colorblind-mode-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 20px;
+    border-top: 1px solid #4a5568;
+    gap: 8px;
+}
+
+.colorblind-label {
+    color: #e0e0e0;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.colorblind-select {
+    padding: 8px 12px;
+    border: 2px solid #4a5568;
+    border-radius: 8px;
+    background: #2d2d3d;
+    color: #e0e0e0;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.colorblind-select:hover {
+    border-color: #7c3aed;
+}
+
+.colorblind-select:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.colorblind-select option {
+    background: #2d2d3d;
+    color: #e0e0e0;
+}
+
+/* Colorblind Mode Color Overrides */
+/* Normal Vision - Default green/red/blue */
+body[data-vision="normal"] {
+    --color-party: #28a745;
+    --color-enemy: #dc3545;
+    --color-friendly: #17a2b8;
+    --color-party-bg-start: #2d3d2d;
+    --color-party-bg-end: #3a4a3a;
+    --color-enemy-bg-start: #3d2d2d;
+    --color-enemy-bg-end: #4a3a3a;
+    --color-friendly-bg-start: #2d3d3d;
+    --color-friendly-bg-end: #3a4a4a;
+}
+
+/* Protanopia (Red-Blind) - Blue/Orange/Purple */
+body[data-vision="protanopia"] {
+    --color-party: #0173B2;      /* Blue for party */
+    --color-enemy: #DE8F05;      /* Orange for enemy */
+    --color-friendly: #CC78BC;   /* Purple for friendly */
+    --color-party-bg-start: #2d3540;
+    --color-party-bg-end: #3a4450;
+    --color-enemy-bg-start: #3d3520;
+    --color-enemy-bg-end: #4a4230;
+    --color-friendly-bg-start: #3d2d3d;
+    --color-friendly-bg-end: #4a3a4a;
+}
+
+/* Deuteranopia (Green-Blind) - Blue/Orange/Purple */
+body[data-vision="deuteranopia"] {
+    --color-party: #0173B2;      /* Blue for party */
+    --color-enemy: #DE8F05;      /* Orange for enemy */
+    --color-friendly: #CC78BC;   /* Purple for friendly */
+    --color-party-bg-start: #2d3540;
+    --color-party-bg-end: #3a4450;
+    --color-enemy-bg-start: #3d3520;
+    --color-enemy-bg-end: #4a4230;
+    --color-friendly-bg-start: #3d2d3d;
+    --color-friendly-bg-end: #4a3a4a;
+}
+
+/* Tritanopia (Blue-Blind) - Red/Teal/Pink */
+body[data-vision="tritanopia"] {
+    --color-party: #009E73;      /* Teal for party */
+    --color-enemy: #D55E00;      /* Red for enemy */
+    --color-friendly: #CC79A7;   /* Pink for friendly */
+    --color-party-bg-start: #2d3d38;
+    --color-party-bg-end: #3a4a45;
+    --color-enemy-bg-start: #3d2d20;
+    --color-enemy-bg-end: #4a3a30;
+    --color-friendly-bg-start: #3d2d38;
+    --color-friendly-bg-end: #4a3a45;
+}
+
+/* Light Theme Colorblind Mode Overrides */
+body[data-theme="light"][data-vision="normal"] {
+    --color-party: #28a745;
+    --color-enemy: #dc3545;
+    --color-friendly: #17a2b8;
+    --color-party-bg-start: #a8d5ba;
+    --color-party-bg-end: #7ec793;
+    --color-enemy-bg-start: #f5a3ab;
+    --color-enemy-bg-end: #ef8792;
+    --color-friendly-bg-start: #85d5e8;
+    --color-friendly-bg-end: #5cc5de;
+}
+
+body[data-theme="light"][data-vision="protanopia"] {
+    --color-party: #0173B2;
+    --color-enemy: #DE8F05;
+    --color-friendly: #CC78BC;
+    --color-party-bg-start: #9dc9e8;
+    --color-party-bg-end: #6db3e0;
+    --color-enemy-bg-start: #ffd98f;
+    --color-enemy-bg-end: #ffc961;
+    --color-friendly-bg-start: #e5b8de;
+    --color-friendly-bg-end: #d89fd1;
+}
+
+body[data-theme="light"][data-vision="deuteranopia"] {
+    --color-party: #0173B2;
+    --color-enemy: #DE8F05;
+    --color-friendly: #CC78BC;
+    --color-party-bg-start: #9dc9e8;
+    --color-party-bg-end: #6db3e0;
+    --color-enemy-bg-start: #ffd98f;
+    --color-enemy-bg-end: #ffc961;
+    --color-friendly-bg-start: #e5b8de;
+    --color-friendly-bg-end: #d89fd1;
+}
+
+body[data-theme="light"][data-vision="tritanopia"] {
+    --color-party: #009E73;
+    --color-enemy: #D55E00;
+    --color-friendly: #CC79A7;
+    --color-party-bg-start: #80d4a8;
+    --color-party-bg-end: #52c285;
+    --color-enemy-bg-start: #ffab7a;
+    --color-enemy-bg-end: #ff8f52;
+    --color-friendly-bg-start: #f299bd;
+    --color-friendly-bg-end: #ed7aa1;
+}
+
 .header-center {
     grid-column: 2;
     display: flex;
@@ -345,18 +488,18 @@ h1 {
 }
 
 .initiative-item.enemy {
-    border-left-color: #dc3545;
-    background: linear-gradient(135deg, #3d2d2d 0%, #4a3a3a 100%);
+    border-left-color: var(--color-enemy);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
 }
 
 .initiative-item.party {
-    border-left-color: #28a745;
-    background: linear-gradient(135deg, #2d3d2d 0%, #3a4a3a 100%);
+    border-left-color: var(--color-party);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
 }
 
 .initiative-item.friendly {
-    border-left-color: #17a2b8;
-    background: linear-gradient(135deg, #2d3d3d 0%, #3a4a4a 100%);
+    border-left-color: var(--color-friendly);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
 }
 
 .initiative-info {
@@ -434,17 +577,17 @@ h1 {
 }
 
 .combatant-type.party {
-    background: #28a745;
+    background: var(--color-party);
     color: white;
 }
 
 .combatant-type.enemy {
-    background: #dc3545;
+    background: var(--color-enemy);
     color: white;
 }
 
 .combatant-type.friendly {
-    background: #17a2b8;
+    background: var(--color-friendly);
     color: white;
 }
 
@@ -629,15 +772,15 @@ h1 {
 }
 
 .combatant-card.enemy {
-    border-left-color: #dc3545;
+    border-left-color: var(--color-enemy);
 }
 
 .combatant-card.party {
-    border-left-color: #28a745;
+    border-left-color: var(--color-party);
 }
 
 .combatant-card.friendly {
-    border-left-color: #17a2b8;
+    border-left-color: var(--color-friendly);
 }
 
 .combatant-card-info {
@@ -988,18 +1131,18 @@ h1 {
 }
 
 .history-item.party {
-    border-left-color: #28a745;
-    background: linear-gradient(135deg, #2d3d2d 0%, #3a4a3a 100%);
+    border-left-color: var(--color-party);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
 }
 
 .history-item.enemy {
-    border-left-color: #dc3545;
-    background: linear-gradient(135deg, #3d2d2d 0%, #4a3a3a 100%);
+    border-left-color: var(--color-enemy);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
 }
 
 .history-item.friendly {
-    border-left-color: #17a2b8;
-    background: linear-gradient(135deg, #2d3d3d 0%, #3a4a4a 100%);
+    border-left-color: var(--color-friendly);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
 }
 
 .history-roll {
@@ -1041,17 +1184,17 @@ h1 {
 }
 
 .history-type.party {
-    background: #28a745;
+    background: var(--color-party);
     color: white;
 }
 
 .history-type.enemy {
-    background: #dc3545;
+    background: var(--color-enemy);
     color: white;
 }
 
 .history-type.friendly {
-    background: #17a2b8;
+    background: var(--color-friendly);
     color: white;
 }
 
@@ -1384,7 +1527,7 @@ body[data-theme="light"] {
 }
 
 body[data-theme="light"] .container {
-    background: white;
+    background: #f5f3f0;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -1424,7 +1567,7 @@ body[data-theme="light"] .btn-primary {
 }
 
 body[data-theme="light"] .initiative-item {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #f8f9fa;
     border-left-color: #667eea;
 }
 
@@ -1433,15 +1576,18 @@ body[data-theme="light"] .initiative-item:hover {
 }
 
 body[data-theme="light"] .initiative-item.enemy {
-    background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
+    border-left-color: var(--color-enemy);
 }
 
 body[data-theme="light"] .initiative-item.party {
-    background: linear-gradient(135deg, #f0fff4 0%, #d4edda 100%);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
+    border-left-color: var(--color-party);
 }
 
 body[data-theme="light"] .initiative-item.friendly {
-    background: linear-gradient(135deg, #f0f9ff 0%, #d1ecf1 100%);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
+    border-left-color: var(--color-friendly);
 }
 
 body[data-theme="light"] .initiative-item.drag-over {
@@ -1617,15 +1763,18 @@ body[data-theme="light"] .history-item {
 }
 
 body[data-theme="light"] .history-item.party {
-    background: linear-gradient(135deg, #f0fff4 0%, #e8f5e9 100%);
+    background: linear-gradient(135deg, var(--color-party-bg-start) 0%, var(--color-party-bg-end) 100%);
+    border-left-color: var(--color-party);
 }
 
 body[data-theme="light"] .history-item.enemy {
-    background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
+    background: linear-gradient(135deg, var(--color-enemy-bg-start) 0%, var(--color-enemy-bg-end) 100%);
+    border-left-color: var(--color-enemy);
 }
 
 body[data-theme="light"] .history-item.friendly {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e1f5fe 100%);
+    background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%);
+    border-left-color: var(--color-friendly);
 }
 
 body[data-theme="light"] .history-roll {
@@ -1680,6 +1829,35 @@ body[data-theme="light"] .theme-toggle-menu .theme-btn.active {
     background: #667eea;
     color: white;
     border-color: #667eea;
+}
+
+/* Light theme - Colorblind Mode Menu */
+body[data-theme="light"] .colorblind-mode-menu {
+    border-top-color: #ddd;
+}
+
+body[data-theme="light"] .colorblind-label {
+    color: #333;
+}
+
+body[data-theme="light"] .colorblind-select {
+    background: #f8f9fa;
+    color: #333;
+    border-color: #ddd;
+}
+
+body[data-theme="light"] .colorblind-select:hover {
+    border-color: #667eea;
+}
+
+body[data-theme="light"] .colorblind-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+body[data-theme="light"] .colorblind-select option {
+    background: #f8f9fa;
+    color: #333;
 }
 
 body[data-theme="light"] .form-group input[type="password"],
