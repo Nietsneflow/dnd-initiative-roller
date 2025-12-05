@@ -14,6 +14,7 @@ let combatants = [];
 let currentRound = 1;
 let initiativeHistory = [];
 let currentTheme = 'dark';
+let currentVisionMode = 'normal';
 let isFirebaseReady = false;
 let isUpdatingFromFirebase = false;
 let currentCampaignId = null;
@@ -41,6 +42,7 @@ const createCampaignForm = document.getElementById('createCampaignForm');
 const editCampaignForm = document.getElementById('editCampaignForm');
 const lightThemeBtn = document.getElementById('lightTheme');
 const darkThemeBtn = document.getElementById('darkTheme');
+const colorblindModeSelect = document.getElementById('colorblindMode');
 const addCombatantForm = document.getElementById('addCombatantForm');
 const initiativeOrderDiv = document.getElementById('initiativeOrder');
 const partyListDiv = document.getElementById('partyList');
@@ -266,10 +268,14 @@ function waitForFirebase() {
 }
 
 async function initializeApp() {
-    // Load device-specific theme BEFORE Firebase loads
+    // Load device-specific theme and vision mode BEFORE Firebase loads
     const savedTheme = localStorage.getItem('dndTheme') || 'dark';
     currentTheme = savedTheme;
     setTheme(currentTheme);
+    
+    const savedVisionMode = localStorage.getItem('dndVisionMode') || 'normal';
+    currentVisionMode = savedVisionMode;
+    setVisionMode(currentVisionMode);
     
     await waitForFirebase();
     
@@ -485,6 +491,13 @@ function attachEventListeners() {
     darkThemeBtn.addEventListener('click', () => {
         setTheme('dark');
     });
+
+    // Colorblind mode selection
+    if (colorblindModeSelect) {
+        colorblindModeSelect.addEventListener('change', (e) => {
+            setVisionMode(e.target.value);
+        });
+    }
 
     addCombatantForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1769,6 +1782,46 @@ function updateThemeButtons() {
         darkThemeBtn.classList.add('active');
         lightThemeBtn.classList.remove('active');
     }
+}
+
+// ============================================================================
+// COLORBLIND MODE MANAGEMENT
+// ============================================================================
+
+function setVisionMode(mode) {
+    currentVisionMode = mode;
+    document.body.setAttribute('data-vision', mode);
+    if (colorblindModeSelect) {
+        colorblindModeSelect.value = mode;
+    }
+    // Save vision mode to localStorage (device-specific, not synced)
+    localStorage.setItem('dndVisionMode', mode);
+    
+    // Diagnostic logging
+    console.log('=== COLORBLIND MODE DEBUG ===');
+    console.log('Vision mode set to:', mode);
+    console.log('Body data-vision attribute:', document.body.getAttribute('data-vision'));
+    console.log('Body data-theme attribute:', document.body.getAttribute('data-theme'));
+    console.log('Computed CSS variables:');
+    const styles = getComputedStyle(document.body);
+    console.log('  --color-party:', styles.getPropertyValue('--color-party'));
+    console.log('  --color-enemy:', styles.getPropertyValue('--color-enemy'));
+    console.log('  --color-friendly:', styles.getPropertyValue('--color-friendly'));
+    console.log('  --color-party-bg-start:', styles.getPropertyValue('--color-party-bg-start'));
+    console.log('  --color-party-bg-end:', styles.getPropertyValue('--color-party-bg-end'));
+    console.log('  --color-enemy-bg-start:', styles.getPropertyValue('--color-enemy-bg-start'));
+    console.log('  --color-enemy-bg-end:', styles.getPropertyValue('--color-enemy-bg-end'));
+    console.log('  --color-friendly-bg-start:', styles.getPropertyValue('--color-friendly-bg-start'));
+    console.log('  --color-friendly-bg-end:', styles.getPropertyValue('--color-friendly-bg-end'));
+    
+    // Check actual computed background on a card
+    const sampleCard = document.querySelector('.initiative-item.party, .initiative-item.enemy, .initiative-item.friendly');
+    if (sampleCard) {
+        const cardStyles = getComputedStyle(sampleCard);
+        console.log('Sample card computed background:', cardStyles.backgroundColor);
+        console.log('Sample card computed border-left-color:', cardStyles.borderLeftColor);
+    }
+    console.log('============================');
 }
 
 // ============================================================================

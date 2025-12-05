@@ -30,6 +30,7 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
 - **History** - Review past initiative rolls from previous rounds
 - **Color-coded** - Visual distinction between party, enemies, and allies
 - **Theme switching** - Light and dark mode support
+- **Colorblind accessibility** - Multiple colorblind-friendly palettes (Protanopia, Deuteranopia, Tritanopia)
 - **Responsive design** - Mobile-friendly with hamburger menu
 
 ## Quick Start
@@ -138,6 +139,7 @@ All devices connected to the same campaign sync automatically:
 ### History & Themes
 - **History** - View past rounds and initiative rolls
 - **Light/Dark Theme** - Toggle in the menu (saved per device)
+- **Colorblind Mode** - Choose from Normal, Protanopia (Red-Blind), Deuteranopia (Green-Blind), or Tritanopia (Blue-Blind) for accessible color schemes
 - **Logout** - Clear authentication (requires password re-entry)
 
 ## Tips for DMs
@@ -268,6 +270,7 @@ This is more than enough for typical D&D usage!
   - Lucky Feat: Manual reroll button on 1s (shows "Lucky (Feat): 1 → X")
 - **Tiebreakers**: Initiative → Dexterity → Player Types (party/allies before enemies)
 - **Persistence**: Real-time Firebase sync + device-specific theme preferences
+- **Colorblind Support**: Four vision modes (Normal, Protanopia, Deuteranopia, Tritanopia) with scientifically-researched color palettes that maintain distinction for different types of color blindness
 - **History**: Last 20 rounds per campaign with full roll details
 
 ### Browser Compatibility
