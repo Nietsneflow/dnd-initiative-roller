@@ -492,6 +492,10 @@ body[data-vision="colorblind"] .initiative-item.friendly .combatant-modifier {
     font-weight: bold;
 }
 
+body[data-theme="light"] .moved-indicator {
+    color: #d84315;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
