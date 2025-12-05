@@ -5,32 +5,32 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
 ## Features
 
 ### Core Initiative System
-- 🎲 **One-click re-roll** - Re-roll all initiatives with a single button
-- 📊 **Smart sorting** - Auto-sorted by initiative, with dex tiebreakers and player priority
-- 🔄 **Round tracking** - Keep track of combat rounds with automatic re-rolling
-- ⚡ **Advantage/Disadvantage** - Full support for advantage and disadvantage rolls
-- 🎯 **Dexterity + Modifiers** - Separate dex and modifier tracking for accurate initiative bonuses
-- 🖱️ **Manual reordering** - Drag and drop to adjust initiative order as needed
+- **One-click re-roll** - Re-roll all initiatives with a single button
+- **Smart sorting** - Auto-sorted by initiative, with dex tiebreakers and player priority
+- **Round tracking** - Keep track of combat rounds with automatic re-rolling
+- **Advantage/Disadvantage** - Full support for advantage and disadvantage rolls
+- **Dexterity + Modifiers** - Separate dex and modifier tracking for accurate initiative bonuses
+- **Manual reordering** - Drag and drop to adjust initiative order as needed
 
 ### Lucky Feature (D&D 5e)
-- 🍀 **Halfling Lucky** - Automatically reroll natural 1s (racial trait)
-- 🎰 **Lucky Feat** - Manual reroll button appears when you roll a 1 (once per round)
-- 📋 **Visual indicators** - See when Lucky was used and what was rerolled
+- **Halfling Lucky** - Automatically reroll natural 1s (racial trait)
+- **Lucky Feat** - Manual reroll button appears when you roll a 1 (once per round)
+- **Visual indicators** - See when Lucky was used and what was rerolled
 
 ### Campaign Management
-- 🎮 **Multiple campaigns** - Create and switch between different campaigns
-- 💾 **Real-time Firebase sync** - All devices update instantly
-- 🔒 **Password protection** - Secure your campaigns with authentication
-- 📱 **Multi-device support** - Access from tablets, phones, TVs, and computers
-- 🔄 **Auto-save** - Changes sync automatically across all devices
+- **Multiple campaigns** - Create and switch between different campaigns
+- **Real-time Firebase sync** - All devices update instantly
+- **Password protection** - Secure your campaigns with authentication
+- **Multi-device support** - Access from tablets, phones, TVs, and computers
+- **Auto-save** - Changes sync automatically across all devices
 
 ### Organization & UI
-- 👥 **Party management** - Dedicated party member and ally tracking
-- 👹 **Enemy tracking** - Quick add/duplicate for multiple enemies
-- 📜 **History** - Review past initiative rolls from previous rounds
-- 🎨 **Color-coded** - Visual distinction between party, enemies, and allies
-- 🌓 **Theme switching** - Light and dark mode support
-- 📱 **Responsive design** - Mobile-friendly with hamburger menu
+- **Party management** - Dedicated party member and ally tracking
+- **Enemy tracking** - Quick add/duplicate for multiple enemies
+- **History** - Review past initiative rolls from previous rounds
+- **Color-coded** - Visual distinction between party, enemies, and allies
+- **Theme switching** - Light and dark mode support
+- **Responsive design** - Mobile-friendly with hamburger menu
 
 ## Quick Start
 
@@ -131,9 +131,9 @@ All devices connected to the same campaign sync automatically:
 - **Drag to reorder** - Manually adjust initiative by dragging combatants
 - **Lucky (Feat) button** - Appears on party/allies with Lucky Feat when they roll a 1
 - **Color-coded borders**:
-  - 🟢 Green = Party members
-  - 🔵 Cyan = Allies
-  - 🔴 Red = Enemies
+  - Green = Party members
+  - Cyan = Allies
+  - Red = Enemies
 
 ### History & Themes
 - **History** - View past rounds and initiative rolls
@@ -241,11 +241,11 @@ This is more than enough for typical D&D usage!
 ### Browser Compatibility
 
 Tested and working on:
-- ✅ Chrome, Edge, Firefox, Safari (desktop & mobile)
-- ✅ iOS Safari (iPhone/iPad)
-- ✅ Android Chrome
-- ✅ Samsung Internet
-- ✅ LG/Samsung/Sony TV browsers
+- Chrome, Edge, Firefox, Safari (desktop & mobile)
+- iOS Safari (iPhone/iPad)
+- Android Chrome
+- Samsung Internet
+- LG/Samsung/Sony TV browsers
 
 Requires JavaScript enabled and localStorage support.
 
