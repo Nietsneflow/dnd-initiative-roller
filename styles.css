@@ -252,12 +252,12 @@ body[data-theme="light"][data-vision="normal"] {
     --color-party: #28a745;
     --color-enemy: #dc3545;
     --color-friendly: #17a2b8;
-    --color-party-bg-start: #66c587;
-    --color-party-bg-end: #3eb36b;
-    --color-enemy-bg-start: #f57179;
-    --color-enemy-bg-end: #f04757;
-    --color-friendly-bg-start: #48c0d4;
-    --color-friendly-bg-end: #2bb3cc;
+    --color-party-bg-start: #4CAF50;
+    --color-party-bg-end: #2E7D32;
+    --color-enemy-bg-start: #EF5350;
+    --color-enemy-bg-end: #C62828;
+    --color-friendly-bg-start: #29B6F6;
+    --color-friendly-bg-end: #0277BD;
 }
 
 body[data-theme="light"][data-vision="colorblind"] {
@@ -1582,7 +1582,7 @@ body[data-theme="light"] .drag-handle {
 }
 
 body[data-theme="light"] .initiative-roll {
-    background: #D8CAA8;
+    background: #DCDCDC;
     color: #667eea;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -1592,11 +1592,7 @@ body[data-theme="light"] .combatant-name {
 }
 
 body[data-theme="light"] .combatant-modifier {
-    color: #666;
-}
-
-body[data-theme="light"] .initiative-item.enemy .combatant-modifier {
-    color: #ccc;
+    color: #353535;
 }
 
 body[data-theme="light"] .lucky-halfling-indicator {
@@ -1670,36 +1666,36 @@ body[data-theme="light"] .combatant-card-info .combatant-card-name {
 
 body[data-theme="light"] .lucky-badge.halfling {
     background: rgba(13, 122, 95, 0.15);
-    color: #0d7a5f;
-    border-color: #0d7a5f;
+    color: #064e3b;
+    border-color: #064e3b;
 }
 
 body[data-theme="light"] .lucky-badge.feat {
     background: rgba(22, 163, 74, 0.15);
-    color: #16a34a;
-    border-color: #16a34a;
+    color: #14532d;
+    border-color: #14532d;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-details {
-    color: #666;
+    color: #353535;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-details strong {
-    color: #333;
+    color: #1a1a1a;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-normal {
-    color: #6b7280;
+    color: #4b5563;
     font-weight: 500;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-advantage {
-    color: #059669;
+    color: #064e3b;
     font-weight: 600;
 }
 
 body[data-theme="light"] .combatant-card-info .combatant-card-advantage.adv-disadvantage {
-    color: #d97706;
+    color: #92400e;
     font-weight: 600;
 }
 
@@ -1778,10 +1774,6 @@ body[data-theme="light"] .history-item.enemy {
     border-left-color: var(--color-enemy);
 }
 
-body[data-theme="light"] .history-item.enemy .history-calc {
-    color: #ccc;
-}
-
 body[data-theme="light"] .history-item.friendly {
     background: linear-gradient(135deg, var(--color-friendly-bg-start) 0%, var(--color-friendly-bg-end) 100%) !important;
     border-left-color: var(--color-friendly);
@@ -1793,7 +1785,7 @@ body[data-theme="light"][data-vision="colorblind"] .history-item.friendly .histo
 }
 
 body[data-theme="light"] .history-roll {
-    background: #D8CAA8;
+    background: #DCDCDC;
     color: #667eea;
 }
 
@@ -1802,7 +1794,7 @@ body[data-theme="light"] .history-name {
 }
 
 body[data-theme="light"] .history-calc {
-    color: #666;
+    color: #353535;
 }
 
 body[data-theme="light"] .menu-toggle {
