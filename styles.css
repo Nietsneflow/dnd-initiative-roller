@@ -278,48 +278,48 @@ body[data-theme="light"][data-vision="normal"] {
     --color-party: #28a745;
     --color-enemy: #dc3545;
     --color-friendly: #17a2b8;
-    --color-party-bg-start: #a8d5ba;
-    --color-party-bg-end: #7ec793;
-    --color-enemy-bg-start: #f5a3ab;
-    --color-enemy-bg-end: #ef8792;
-    --color-friendly-bg-start: #85d5e8;
-    --color-friendly-bg-end: #5cc5de;
+    --color-party-bg-start: #66c587;
+    --color-party-bg-end: #3eb36b;
+    --color-enemy-bg-start: #f57179;
+    --color-enemy-bg-end: #f04757;
+    --color-friendly-bg-start: #48c0d4;
+    --color-friendly-bg-end: #2bb3cc;
 }
 
 body[data-theme="light"][data-vision="protanopia"] {
     --color-party: #0173B2;
     --color-enemy: #DE8F05;
     --color-friendly: #CC78BC;
-    --color-party-bg-start: #9dc9e8;
-    --color-party-bg-end: #6db3e0;
-    --color-enemy-bg-start: #ffd98f;
-    --color-enemy-bg-end: #ffc961;
-    --color-friendly-bg-start: #e5b8de;
-    --color-friendly-bg-end: #d89fd1;
+    --color-party-bg-start: #5bb3e0;
+    --color-party-bg-end: #2a9fd6;
+    --color-enemy-bg-start: #ffbe5c;
+    --color-enemy-bg-end: #ffad33;
+    --color-friendly-bg-start: #da9dce;
+    --color-friendly-bg-end: #d080c4;
 }
 
 body[data-theme="light"][data-vision="deuteranopia"] {
     --color-party: #0173B2;
     --color-enemy: #DE8F05;
     --color-friendly: #CC78BC;
-    --color-party-bg-start: #9dc9e8;
-    --color-party-bg-end: #6db3e0;
-    --color-enemy-bg-start: #ffd98f;
-    --color-enemy-bg-end: #ffc961;
-    --color-friendly-bg-start: #e5b8de;
-    --color-friendly-bg-end: #d89fd1;
+    --color-party-bg-start: #5bb3e0;
+    --color-party-bg-end: #2a9fd6;
+    --color-enemy-bg-start: #ffbe5c;
+    --color-enemy-bg-end: #ffad33;
+    --color-friendly-bg-start: #da9dce;
+    --color-friendly-bg-end: #d080c4;
 }
 
 body[data-theme="light"][data-vision="tritanopia"] {
     --color-party: #009E73;
     --color-enemy: #D55E00;
     --color-friendly: #CC79A7;
-    --color-party-bg-start: #80d4a8;
-    --color-party-bg-end: #52c285;
-    --color-enemy-bg-start: #ffab7a;
-    --color-enemy-bg-end: #ff8f52;
-    --color-friendly-bg-start: #f299bd;
-    --color-friendly-bg-end: #ed7aa1;
+    --color-party-bg-start: #52c18f;
+    --color-party-bg-end: #2dad76;
+    --color-enemy-bg-start: #ff9e52;
+    --color-enemy-bg-end: #ff8729;
+    --color-friendly-bg-start: #ed7db3;
+    --color-friendly-bg-end: #e95fa0;
 }
 
 .header-center {
