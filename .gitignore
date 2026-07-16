@@ -1,3 +1,5 @@
 backup/
+backup_*/
+firebase_data_export.json
 .DS_Store
 *.log

@@ -30,7 +30,7 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
 - **History** - Review past initiative rolls from previous rounds
 - **Color-coded** - Visual distinction between party, enemies, and allies
 - **Theme switching** - Light and dark mode support
-- **Colorblind accessibility** - Multiple colorblind-friendly palettes (Protanopia, Deuteranopia, Tritanopia)
+- **Colorblind accessibility** - Dedicated colorblind-friendly palette (Vision Mode: Normal or Colorblind)
 - **Responsive design** - Mobile-friendly with hamburger menu
 
 ## Quick Start
@@ -42,8 +42,8 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
    - Enable **Realtime Database** (use test mode for development)
    - Enable **Anonymous Authentication** under Authentication → Sign-in method
    
-2. Add your Firebase configuration to `app.js`:
-   - Replace the Firebase config object with your project's credentials
+2. Add your Firebase configuration to `index.html`:
+   - Replace the `firebaseConfig` object in the module script at the bottom of `index.html` with your project's credentials
    - Find these in Firebase Console → Project Settings → General
 
 ### Running Locally
@@ -139,13 +139,13 @@ All devices connected to the same campaign sync automatically:
 ### History & Themes
 - **History** - View past rounds and initiative rolls
 - **Light/Dark Theme** - Toggle in the menu (saved per device)
-- **Colorblind Mode** - Choose from Normal, Protanopia (Red-Blind), Deuteranopia (Green-Blind), or Tritanopia (Blue-Blind) for accessible color schemes
+- **Vision Mode** - Choose Normal or Colorblind for an accessible color scheme
 - **Logout** - Clear authentication (requires password re-entry)
 
 ## Tips for DMs
 
 ### Setup
-- **Change the password** in `app.js` (line 15: `APP_PASSWORD`) before deploying
+- **Change the password** in `app.js` (`APP_PASSWORD` constant near the top) before deploying. Changing it also invalidates any "Remember Me" sessions saved with the old password.
 - Create separate campaigns for different adventures or sessions
 - Add all party members once - they persist across sessions
 - Set up party members with Lucky features (Halflings get Lucky-H, anyone can have Lucky-F feat)
@@ -165,8 +165,9 @@ All devices connected to the same campaign sync automatically:
 ### Advanced
 - Dexterity breaks initiative ties automatically
 - When dex is also tied, player types (party/allies) go before enemies
-- Manual reordering preserves across re-rolls until you click "Next Round"
-- History is kept for the last 20 rounds per campaign
+- Manual reordering lasts until the next re-roll ("Re-roll" or "Next Round" clears it)
+- Adding, editing, or duplicating a combatant rolls initiative only for that combatant - everyone else's rolls and your manual ordering are preserved, and the affected card slots into the position its new roll deserves (Lucky rerolls do the same). Removing combatants never re-rolls.
+- History is kept for the last 20 rounds per campaign; drag reorders and Lucky feat rerolls update the current round's entry instead of creating duplicates
 
 ## Firebase Setup Details
 
@@ -270,7 +271,7 @@ This is more than enough for typical D&D usage!
   - Lucky Feat: Manual reroll button on 1s (shows "Lucky (Feat): 1 → X")
 - **Tiebreakers**: Initiative → Dexterity → Player Types (party/allies before enemies)
 - **Persistence**: Real-time Firebase sync + device-specific theme preferences
-- **Colorblind Support**: Four vision modes (Normal, Protanopia, Deuteranopia, Tritanopia) with scientifically-researched color palettes that maintain distinction for different types of color blindness
+- **Colorblind Support**: Two vision modes (Normal and Colorblind) with a palette that maintains distinction between party, enemies, and allies
 - **History**: Last 20 rounds per campaign with full roll details
 
 ### Browser Compatibility
@@ -292,14 +293,14 @@ Requires JavaScript enabled and localStorage support.
 
 ### Firebase connection issues
 - Check that Anonymous Authentication is enabled
-- Verify your Firebase config in `app.js` is correct
+- Verify your Firebase config in `index.html` is correct
 - Check browser console for specific error messages
 - Ensure database rules allow authenticated reads/writes
 
 ### Password not working
 - Make sure you changed `APP_PASSWORD` in `app.js`
 - Clear browser cache and try again
-- Check that "Remember Me" didn't save an old token
+- "Remember Me" tokens are tied to the current password, so changing the password automatically requires re-entry on all devices
 
 ## Contributing
 

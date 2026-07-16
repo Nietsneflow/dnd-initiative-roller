@@ -7,7 +7,8 @@
 // - SCALING: Shows comprehensive diagnostics for the dynamic scaling algorithm
 //   including viewport size, item measurements, scale factors, and CSS variables
 const DEBUG_FLAGS = {
-    SCALING: false  // Set to true to enable detailed scaling diagnostics
+    SCALING: false, // Set to true to enable detailed scaling diagnostics
+    VISION: false   // Set to true to log computed colors when switching vision modes
 };
 
 let combatants = [];
@@ -55,6 +56,30 @@ const passwordError = document.getElementById('passwordError');
 const rememberMeCheckbox = document.getElementById('rememberMe');
 const logoutBtn = document.getElementById('logoutBtn');
 const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+// Escape user-provided text (combatant/campaign names) before inserting into
+// innerHTML - names sync to every connected device, so unescaped HTML would be
+// stored XSS across the whole table
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Monotonic ID generator - Date.now() alone can collide when adding/duplicating
+// combatants in the same millisecond
+let lastGeneratedId = 0;
+function newId() {
+    lastGeneratedId = Math.max(Date.now(), lastGeneratedId + 1);
+    return lastGeneratedId;
+}
 
 // ============================================================================
 // AUTHENTICATION & SECURITY
@@ -116,20 +141,20 @@ document.addEventListener('visibilitychange', async () => {
 function checkAuth() {
     const authToken = localStorage.getItem('dndAuthToken');
     const authExpiry = localStorage.getItem('dndAuthExpiry');
-    
+
     if (authToken && authExpiry) {
         const now = Date.now();
-        if (now < parseInt(authExpiry)) {
-            // Token is still valid
+        // Token must match the current password, so changing APP_PASSWORD
+        // invalidates every remembered session
+        if (authToken === btoa(APP_PASSWORD) && now < parseInt(authExpiry)) {
             isAuthenticated = true;
             return true;
-        } else {
-            // Token expired
-            localStorage.removeItem('dndAuthToken');
-            localStorage.removeItem('dndAuthExpiry');
         }
+        // Token expired or stale (password changed)
+        localStorage.removeItem('dndAuthToken');
+        localStorage.removeItem('dndAuthExpiry');
     }
-    
+
     return false;
 }
 
@@ -148,17 +173,12 @@ function handlePasswordSubmit(e) {
     e.preventDefault();
     
     const enteredPassword = passwordInput.value;
-    console.log('Password entered, length:', enteredPassword.length);
-    console.log('Expected password:', APP_PASSWORD);
-    console.log('Match:', enteredPassword === APP_PASSWORD);
-    
+
     if (enteredPassword === APP_PASSWORD) {
         // Correct password - authenticate with Firebase
-        console.log('Password correct, authenticating with Firebase...');
         authenticateWithFirebase();
     } else {
         // Wrong password
-        console.log('Password incorrect');
         passwordError.textContent = '❌ Incorrect password. Please try again.';
         passwordError.classList.add('show');
         passwordInput.value = '';
@@ -196,7 +216,7 @@ async function authenticateWithFirebase() {
         
         // Save auth token if "Remember Me" is checked
         if (rememberMeCheckbox.checked) {
-            const authToken = btoa(APP_PASSWORD + Date.now());
+            const authToken = btoa(APP_PASSWORD);
             const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
             localStorage.setItem('dndAuthToken', authToken);
             localStorage.setItem('dndAuthExpiry', expiry.toString());
@@ -255,13 +275,17 @@ function handleLogout() {
     }
 }
 
-function waitForFirebase() {
-    return new Promise((resolve) => {
+function waitForFirebase(timeoutMs = 15000) {
+    return new Promise((resolve, reject) => {
+        const start = Date.now();
         const checkFirebase = setInterval(() => {
             if (window.firebaseDB && window.firebaseAuth && window.firebaseSignInAnonymously) {
                 clearInterval(checkFirebase);
                 isFirebaseReady = true;
                 resolve();
+            } else if (Date.now() - start > timeoutMs) {
+                clearInterval(checkFirebase);
+                reject(new Error('Firebase SDK failed to load. Check your internet connection and refresh.'));
             }
         }, 100);
     });
@@ -346,9 +370,9 @@ async function init() {
     // Check if user has valid app password token BEFORE waiting for Firebase
     if (checkAuth()) {
         console.log('✅ Valid auth token found, attempting Firebase authentication...');
-        await waitForFirebase();
         // They have app token, try to authenticate with Firebase
         try {
+            await waitForFirebase();
             // Check if already signed in to Firebase
             if (window.firebaseAuth.currentUser) {
                 console.log('✅ Already signed in to Firebase:', window.firebaseAuth.currentUser.uid);
@@ -381,8 +405,8 @@ async function init() {
         }
     } else {
         console.log('❌ No valid auth token found, showing password modal');
-        // No authentication, wait for Firebase then show password modal
-        await waitForFirebase();
+        // No authentication - show password modal (Firebase readiness is
+        // re-checked on submit, which surfaces its own error if loading failed)
         showPasswordModal();
     }
 }
@@ -426,8 +450,9 @@ function attachEventListeners() {
     clearAllBtn.addEventListener('click', () => {
         if (confirm('Remove all enemies? (Party members and friendlies will be kept)')) {
             combatants = combatants.filter(c => c.type !== 'enemy');
+            // Removal doesn't change anyone's roll - just re-render and sync
             renderCombatantLists();
-            rollAllInitiative();
+            renderInitiativeOrder();
             saveToFirebase();
         }
     });
@@ -563,7 +588,7 @@ function addCombatant() {
     const advantage = advantageSelect.value;
 
     const newCombatant = {
-        id: Date.now(),
+        id: newId(),
         name: name,
         dex: dex,
         modifier: modifier,
@@ -580,7 +605,8 @@ function addCombatant() {
     };
 
     combatants.push(newCombatant);
-    
+    rollNewCombatant(newCombatant); // Only the newcomer rolls - existing initiative stands
+
     // Clear form
     nameInput.value = '';
     dexInput.value = '0';
@@ -588,21 +614,22 @@ function addCombatant() {
     advantageSelect.value = 'normal';
 
     renderCombatantLists();
-    rollAllInitiative();
+    renderInitiativeOrder();
     saveToFirebase();
 }
 
 function removeCombatant(id) {
     combatants = combatants.filter(c => c.id !== id);
+    // Removal doesn't change anyone's roll - just re-render and sync
     renderCombatantLists();
-    rollAllInitiative();
+    renderInitiativeOrder();
     saveToFirebase();
 }
 
 function toggleAdvantage(id) {
     const combatant = combatants.find(c => c.id === id);
     if (!combatant) return;
-    
+
     // Cycle through: normal -> advantage -> disadvantage -> normal
     if (combatant.advantage === 'normal') {
         combatant.advantage = 'advantage';
@@ -611,9 +638,10 @@ function toggleAdvantage(id) {
     } else {
         combatant.advantage = 'normal';
     }
-    
+
+    rollNewCombatant(combatant); // Re-roll only this combatant with the new roll type
     renderCombatantLists();
-    rollAllInitiative();
+    renderInitiativeOrder();
     saveToFirebase();
 }
 
@@ -649,7 +677,7 @@ function duplicateCombatant(id) {
     newName = `${baseName} ${nextNumber}`;
     
     const duplicate = {
-        id: Date.now(),
+        id: newId(),
         name: newName,
         dex: combatant.dex || 0,
         modifier: combatant.modifier || 0,
@@ -664,10 +692,11 @@ function duplicateCombatant(id) {
         moveDirection: null,
         originalIndex: null
     };
-    
+
     combatants.push(duplicate);
+    rollNewCombatant(duplicate); // Only the copy rolls - existing initiative stands
     renderCombatantLists();
-    rollAllInitiative();
+    renderInitiativeOrder();
     saveToFirebase();
 }
 
@@ -679,51 +708,124 @@ function rollD20() {
     return Math.floor(Math.random() * 20) + 1;
 }
 
-function rollAllInitiative() {
-    combatants.forEach(combatant => {
-        let roll;
-        let luckyReroll = null; // Track if Lucky - H was used
-        
-        if (combatant.advantage === 'advantage') {
-            const roll1 = rollD20();
-            const roll2 = rollD20();
-            roll = Math.max(roll1, roll2);
-            combatant.rolls = [roll1, roll2];
-        } else if (combatant.advantage === 'disadvantage') {
-            const roll1 = rollD20();
-            const roll2 = rollD20();
-            roll = Math.min(roll1, roll2);
-            combatant.rolls = [roll1, roll2];
-        } else {
-            roll = rollD20();
-            combatant.rolls = [roll];
-        }
-        
-        // Lucky - H (Halfling): Auto-reroll 1s
-        if (combatant.lucky === 'halfling' && roll === 1) {
-            luckyReroll = roll; // Store the original 1
-            roll = rollD20(); // Reroll
-            combatant.rolls = [luckyReroll, roll]; // Show both rolls
-        }
-        
-        // Calculate initiative bonus (dex + modifier)
-        const dex = combatant.dex || 0;
-        const modifier = combatant.modifier || 0;
-        const initiativeBonus = dex + modifier;
-        
-        combatant.initiative = roll + initiativeBonus;
-        combatant.baseRoll = roll;
-        combatant.initiativeBonus = initiativeBonus; // Store for display
-        combatant.luckyReroll = luckyReroll; // Store if Lucky - H was used
-        combatant.luckyUsed = false; // Reset Lucky - F usage for new round
-        combatant.manualOrder = null; // Reset manual ordering on re-roll
-        combatant.wasMoved = false; // Reset moved indicator
-        combatant.moveDirection = null; // Reset move direction
-        combatant.originalIndex = null; // Reset original position
+// Roll the d20(s) for a given roll type. Returns the effective roll plus all
+// dice rolled (two entries for advantage/disadvantage).
+function rollInitiativeDice(advantage) {
+    if (advantage === 'advantage' || advantage === 'disadvantage') {
+        const roll1 = rollD20();
+        const roll2 = rollD20();
+        const roll = advantage === 'advantage' ? Math.max(roll1, roll2) : Math.min(roll1, roll2);
+        return { roll, rolls: [roll1, roll2] };
+    }
+    const roll = rollD20();
+    return { roll, rolls: [roll] };
+}
+
+// Lucky (Halfling racial or Lucky feat) reroll of a natural 1. Per RAW only the
+// die that came up 1 is rerolled - with advantage/disadvantage the other die is
+// kept and the max/min re-applied. Assumes the current effective roll is 1.
+function rerollNatOneDie(advantage, rolls) {
+    const newDie = rollD20();
+    if (advantage === 'advantage') {
+        // Effective roll was 1, so both dice were 1s - reroll one of them
+        return { roll: Math.max(newDie, 1), rolls: [newDie, 1] };
+    }
+    if (advantage === 'disadvantage') {
+        // Keep the die that wasn't the 1 (or 1 again if both were 1s)
+        const otherDie = Math.max(...rolls);
+        return { roll: Math.min(newDie, otherDie), rolls: [newDie, otherDie] };
+    }
+    return { roll: newDie, rolls: [1, newDie] }; // Show original 1 alongside the reroll
+}
+
+// Roll initiative for one combatant: dice, Halfling Lucky auto-reroll, and all
+// derived fields. Does NOT touch manual ordering - callers decide that.
+function rollSingleInitiative(combatant) {
+    const { roll: firstRoll, rolls } = rollInitiativeDice(combatant.advantage);
+    let roll = firstRoll;
+    combatant.rolls = rolls;
+
+    let luckyReroll = null;
+    if (combatant.lucky === 'halfling' && roll === 1) {
+        luckyReroll = 1; // Store the original 1 for the Lucky indicator
+        const rerolled = rerollNatOneDie(combatant.advantage, rolls);
+        roll = rerolled.roll;
+        combatant.rolls = rerolled.rolls;
+    }
+
+    const dex = combatant.dex || 0;
+    const modifier = combatant.modifier || 0;
+    const initiativeBonus = dex + modifier;
+
+    combatant.initiative = roll + initiativeBonus;
+    combatant.baseRoll = roll;
+    combatant.initiativeBonus = initiativeBonus; // Store for display
+    combatant.luckyReroll = luckyReroll;
+    combatant.luckyUsed = false; // Reset Lucky - F usage for the new roll
+}
+
+// Ordering by roll alone: initiative, then dex, then player types before enemies
+function rolledOrderComparator(a, b) {
+    if (a.initiative !== b.initiative) {
+        return b.initiative - a.initiative; // Higher initiative goes first
+    }
+
+    const aDex = a.dex || 0;
+    const bDex = b.dex || 0;
+    if (aDex !== bDex) {
+        return bDex - aDex; // Higher dex goes first
+    }
+
+    const typeOrder = { party: 0, friendly: 1, enemy: 2 };
+    return (typeOrder[a.type] ?? 2) - (typeOrder[b.type] ?? 2); // Players before enemies
+}
+
+// Sort used everywhere an initiative order is displayed or compared:
+// manual order first, then the rolled order
+function initiativeComparator(a, b) {
+    if (a.manualOrder !== null && b.manualOrder !== null) {
+        return a.manualOrder - b.manualOrder;
+    }
+    if (a.manualOrder !== null) return -1;
+    if (b.manualOrder !== null) return 1;
+    return rolledOrderComparator(a, b);
+}
+
+// After a combatant's roll changes (Lucky reroll, edit, new arrival), slot it
+// into the position its new initiative deserves. Without manual ordering the
+// display sort already handles that; when the DM has dragged cards (everyone
+// pinned by manualOrder), insert by initiative into the curated order and renumber.
+function repositionCombatant(combatant) {
+    const others = combatants.filter(c => c !== combatant);
+    if (!others.some(c => c.manualOrder !== null)) {
+        combatant.manualOrder = null;
+        return;
+    }
+
+    others.sort(initiativeComparator);
+    let insertAt = others.findIndex(other => rolledOrderComparator(combatant, other) < 0);
+    if (insertAt === -1) insertAt = others.length;
+    others.splice(insertAt, 0, combatant);
+    others.forEach((c, idx) => {
+        c.manualOrder = idx;
     });
 
-    // After rolling, set original indices based on initiative order
-    const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
+    // This placement came from the dice, not a drag
+    combatant.wasMoved = false;
+    combatant.moveDirection = null;
+}
+
+function rollAllInitiative() {
+    combatants.forEach(combatant => {
+        rollSingleInitiative(combatant);
+        combatant.manualOrder = null; // Reset manual ordering on a full re-roll
+        combatant.wasMoved = false;
+        combatant.moveDirection = null;
+        combatant.originalIndex = null;
+    });
+
+    // After rolling, set original indices based on displayed order
+    const sorted = [...combatants].sort(initiativeComparator);
     sorted.forEach((combatant, index) => {
         combatant.originalIndex = index;
     });
@@ -734,10 +836,18 @@ function rollAllInitiative() {
     renderInitiativeOrder();
 }
 
-function saveToHistory() {
-    if (combatants.length === 0) return;
-    
-    const snapshot = {
+// Roll initiative for a combatant that was just added (or whose stats changed)
+// without disturbing everyone else's rolls or the DM's manual ordering.
+function rollNewCombatant(combatant) {
+    rollSingleInitiative(combatant);
+    repositionCombatant(combatant);
+
+    const sorted = [...combatants].sort(initiativeComparator);
+    combatant.originalIndex = sorted.indexOf(combatant);
+}
+
+function buildHistorySnapshot() {
+    return {
         round: currentRound,
         timestamp: new Date().toLocaleString(),
         combatants: combatants.map(c => ({
@@ -757,13 +867,29 @@ function saveToHistory() {
             moveDirection: c.moveDirection ?? null
         }))
     };
-    
-    // Always add new entry to history (never overwrite)
-    initiativeHistory.push(snapshot);
-    
+}
+
+function saveToHistory() {
+    if (combatants.length === 0) return;
+
+    initiativeHistory.push(buildHistorySnapshot());
+
     // Keep only last 20 entries
     if (initiativeHistory.length > 20) {
         initiativeHistory.shift();
+    }
+}
+
+// Amend the latest history entry when the current round's order changes after
+// the roll (drag reorder, Lucky feat) instead of pushing a duplicate entry
+function updateHistoryForCurrentRound() {
+    if (combatants.length === 0) return;
+
+    const last = initiativeHistory[initiativeHistory.length - 1];
+    if (last && last.round === currentRound) {
+        initiativeHistory[initiativeHistory.length - 1] = buildHistorySnapshot();
+    } else {
+        saveToHistory();
     }
 }
 
@@ -778,39 +904,12 @@ function renderInitiativeOrder() {
     }
 
     // Sort by manual order first, then by initiative with tiebreakers
-    const sorted = [...combatants].sort((a, b) => {
-        // If both have manual order, sort by that
-        if (a.manualOrder !== null && b.manualOrder !== null) {
-            return a.manualOrder - b.manualOrder;
-        }
-        // If only a has manual order, it goes first (lower manualOrder = earlier)
-        if (a.manualOrder !== null) return -1;
-        if (b.manualOrder !== null) return 1;
-        
-        // Otherwise sort by initiative
-        if (a.initiative !== b.initiative) {
-            return b.initiative - a.initiative; // Higher initiative goes first
-        }
-        
-        // Tie in initiative - check dex
-        const aDex = a.dex || 0;
-        const bDex = b.dex || 0;
-        if (aDex !== bDex) {
-            return bDex - aDex; // Higher dex goes first
-        }
-        
-        // Still tied - player types go first (party/friendly before enemy)
-        const typeOrder = { party: 0, friendly: 1, enemy: 2 };
-        const aTypeOrder = typeOrder[a.type] ?? 2;
-        const bTypeOrder = typeOrder[b.type] ?? 2;
-        return aTypeOrder - bTypeOrder; // Lower value (player types) go first
-    });
+    const sorted = [...combatants].sort(initiativeComparator);
 
     initiativeOrderDiv.innerHTML = sorted.map((combatant, index) => {
         const dex = combatant.dex || 0;
         const modifier = combatant.modifier || 0;
-        const bonus = dex + modifier;
-        
+
         let rollDisplay = '';
         if (combatant.luckyReroll !== null && combatant.luckyReroll !== undefined) {
             // Lucky was used (either Halfling or Feat)
@@ -845,7 +944,7 @@ function renderInitiativeOrder() {
                 <div class="initiative-info">
                     <div class="initiative-roll">${combatant.initiative}${movedIndicator}</div>
                     <div class="initiative-details">
-                        <span class="combatant-name">${combatant.name}</span>
+                        <span class="combatant-name">${escapeHtml(combatant.name)}</span>
                         <span class="combatant-modifier">${rollDisplay}</span>
                     </div>
                 </div>
@@ -1135,144 +1234,70 @@ function adjustInitiativeOrderSize() {
     });
 }
 
-function attemptFit(container, baseGap, basePadding, baseMinHeight, baseNameSize, baseRollSize, baseModifierSize, baseTypeSize, baseDragSize, isMobile, iteration = 0) {
-    // This function is no longer used but kept for compatibility
+function combatantCardHtml(combatant) {
+    const isEnemy = combatant.type === 'enemy';
+
+    let advantageText = 'Normal';
+    let advantageClass = 'adv-normal';
+    if (combatant.advantage === 'advantage') {
+        advantageText = isEnemy ? 'ADV' : 'Advantage';
+        advantageClass = 'adv-advantage';
+    }
+    if (combatant.advantage === 'disadvantage') {
+        advantageText = isEnemy ? 'DIS' : 'Disadvantage';
+        advantageClass = 'adv-disadvantage';
+    }
+
+    const dex = combatant.dex || 0;
+    const modifier = combatant.modifier || 0;
+    const bonus = dex + modifier;
+    const bonusSign = bonus >= 0 ? '+' : '';
+    const modSign = modifier >= 0 ? '+' : '';
+
+    // Lucky indicator (party/friendly only)
+    let luckyBadge = '';
+    if (!isEnemy && combatant.lucky === 'halfling') {
+        luckyBadge = ' <span class="lucky-badge halfling" title="Lucky (Halfling): Auto-reroll 1s">🍀 Lucky-H</span>';
+    } else if (!isEnemy && combatant.lucky === 'feat') {
+        luckyBadge = ' <span class="lucky-badge feat" title="Lucky (Feat): Manual reroll">🍀 Lucky-F</span>';
+    }
+
+    const advantageLine = isEnemy ? '' :
+        `<div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>`;
+
+    const actions = isEnemy ? `
+                        <button class="btn-copy" onclick="duplicateCombatant(${combatant.id})" title="Duplicate this enemy">Copy</button>
+                        <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
+                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>` : `
+                        <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
+                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>`;
+
+    return `
+        <div class="combatant-card ${combatant.type}">
+            <div class="combatant-card-info">
+                <div class="combatant-card-name">${escapeHtml(combatant.name)}${luckyBadge}</div>
+                <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
+                ${advantageLine}
+            </div>
+            <div class="combatant-actions">${actions}
+            </div>
+        </div>
+    `;
 }
 
 function renderCombatantLists() {
-    const party = combatants.filter(c => c.type === 'party');
-    const enemies = combatants.filter(c => c.type === 'enemy');
-    const friendlies = combatants.filter(c => c.type === 'friendly');
+    const sections = [
+        { div: partyListDiv, type: 'party', emptyText: 'No party members added' },
+        { div: enemyListDiv, type: 'enemy', emptyText: 'No enemies added' },
+        { div: friendlyListDiv, type: 'friendly', emptyText: 'No friendlies added' }
+    ];
 
-    // Render party list
-    if (party.length === 0) {
-        partyListDiv.innerHTML = '<p class="empty-state-small">No party members added</p>';
-    } else {
-        partyListDiv.innerHTML = party.map(combatant => {
-            let advantageText = 'Normal';
-            let advantageClass = 'adv-normal';
-            if (combatant.advantage === 'advantage') {
-                advantageText = 'Advantage';
-                advantageClass = 'adv-advantage';
-            }
-            if (combatant.advantage === 'disadvantage') {
-                advantageText = 'Disadvantage';
-                advantageClass = 'adv-disadvantage';
-            }
-            
-            const dex = combatant.dex || 0;
-            const modifier = combatant.modifier || 0;
-            const bonus = dex + modifier;
-            const bonusSign = bonus >= 0 ? '+' : '';
-            const modSign = modifier >= 0 ? '+' : '';
-            
-            // Lucky indicator
-            let luckyBadge = '';
-            if (combatant.lucky === 'halfling') {
-                luckyBadge = '<span class="lucky-badge halfling" title="Lucky (Halfling): Auto-reroll 1s">🍀 Lucky-H</span>';
-            } else if (combatant.lucky === 'feat') {
-                luckyBadge = '<span class="lucky-badge feat" title="Lucky (Feat): Manual reroll">🍀 Lucky-F</span>';
-            }
-            
-            return `
-                <div class="combatant-card party">
-                    <div class="combatant-card-info">
-                        <div class="combatant-card-name">${combatant.name} ${luckyBadge}</div>
-                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
-                        <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
-                    </div>
-                    <div class="combatant-actions">
-                        <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Render enemy list
-    if (enemies.length === 0) {
-        enemyListDiv.innerHTML = '<p class="empty-state-small">No enemies added</p>';
-    } else {
-        enemyListDiv.innerHTML = enemies.map(combatant => {
-            let advantageText = 'Normal';
-            let advantageClass = 'adv-normal';
-            if (combatant.advantage === 'advantage') {
-                advantageText = 'ADV';
-                advantageClass = 'adv-advantage';
-            }
-            if (combatant.advantage === 'disadvantage') {
-                advantageText = 'DIS';
-                advantageClass = 'adv-disadvantage';
-            }
-            
-            const dex = combatant.dex || 0;
-            const modifier = combatant.modifier || 0;
-            const bonus = dex + modifier;
-            const bonusSign = bonus >= 0 ? '+' : '';
-            const modSign = modifier >= 0 ? '+' : '';
-            
-            return `
-                <div class="combatant-card enemy">
-                    <div class="combatant-card-info">
-                        <div class="combatant-card-name">${combatant.name}</div>
-                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
-                    </div>
-                    <div class="combatant-actions">
-                        <button class="btn-copy" onclick="duplicateCombatant(${combatant.id})" title="Duplicate this enemy">Copy</button>
-                        <button class="btn-advantage ${advantageClass}" onclick="toggleAdvantage(${combatant.id})" title="Toggle Advantage/Disadvantage">${advantageText}</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Render friendly list
-    if (friendlies.length === 0) {
-        friendlyListDiv.innerHTML = '<p class="empty-state-small">No friendlies added</p>';
-    } else {
-        friendlyListDiv.innerHTML = friendlies.map(combatant => {
-            let advantageText = 'Normal';
-            let advantageClass = 'adv-normal';
-            if (combatant.advantage === 'advantage') {
-                advantageText = 'Advantage';
-                advantageClass = 'adv-advantage';
-            }
-            if (combatant.advantage === 'disadvantage') {
-                advantageText = 'Disadvantage';
-                advantageClass = 'adv-disadvantage';
-            }
-            
-            const dex = combatant.dex || 0;
-            const modifier = combatant.modifier || 0;
-            const bonus = dex + modifier;
-            const bonusSign = bonus >= 0 ? '+' : '';
-            const modSign = modifier >= 0 ? '+' : '';
-            
-            // Lucky indicator
-            let luckyBadge = '';
-            if (combatant.lucky === 'halfling') {
-                luckyBadge = '<span class="lucky-badge halfling" title="Lucky (Halfling): Auto-reroll 1s">🍀 Lucky-H</span>';
-            } else if (combatant.lucky === 'feat') {
-                luckyBadge = '<span class="lucky-badge feat" title="Lucky (Feat): Manual reroll">🍀 Lucky-F</span>';
-            }
-            
-            return `
-                <div class="combatant-card friendly">
-                    <div class="combatant-card-info">
-                        <div class="combatant-card-name">${combatant.name} ${luckyBadge}</div>
-                        <div class="combatant-card-details">Initiative: <strong>${bonusSign}${bonus}</strong> (${dex} dex ${modSign}${modifier} mod)</div>
-                        <div class="combatant-card-advantage ${advantageClass}">${advantageText}</div>
-                    </div>
-                    <div class="combatant-actions">
-                        <button class="btn-edit" onclick="editPartyMember(${combatant.id})" title="Edit">✏️</button>
-                        <button class="btn-remove" onclick="removeCombatant(${combatant.id})" title="Remove">✖</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
+    sections.forEach(({ div, type, emptyText }) => {
+        const list = combatants.filter(c => c.type === type);
+        div.innerHTML = list.length === 0
+            ? `<p class="empty-state-small">${emptyText}</p>`
+            : list.map(combatantCardHtml).join('');
+    });
 }
 
 // ============================================================================
@@ -1341,71 +1366,37 @@ function getDragAfterElement(container, y) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-function handleDragEnter(e) {
-    if (this !== draggedElement) {
-        this.classList.add('drag-over');
-    }
-}
-
-function handleDragLeave(e) {
-    this.classList.remove('drag-over');
-}
-
 function handleDrop(e) {
     if (e.stopPropagation) {
         e.stopPropagation();
     }
-    
+
     // Get all initiative items in their current DOM order
     const items = [...initiativeOrderDiv.querySelectorAll('.initiative-item')];
     const newOrder = items.map(item => item.dataset.id);
-    
-    // Find if the dragged item's position changed
-    const sorted = [...combatants].sort((a, b) => {
-        if (a.manualOrder !== null && b.manualOrder !== null) {
-            return a.manualOrder - b.manualOrder;
-        }
-        if (a.manualOrder !== null) return -1;
-        if (b.manualOrder !== null) return 1;
-        return b.initiative - a.initiative;
-    });
-    
+
+    // Find if the dragged item's position changed (same comparator as the
+    // rendered list, so tie-broken positions are judged correctly)
+    const sorted = [...combatants].sort(initiativeComparator);
+
     const oldIndex = sorted.findIndex(c => c.id == draggedId);
     const newIndex = newOrder.findIndex(id => id == draggedId);
-    
+
     if (oldIndex !== newIndex) {
-        // Don't clear existing manual orders - preserve them
-        // Only update if combatant doesn't have manual order yet
-        const hasManualOrdering = combatants.some(c => c.manualOrder !== null);
-        
-        if (!hasManualOrdering) {
-            // First time setting manual order - set for all
-            newOrder.forEach((id, idx) => {
-                const combatant = combatants.find(c => c.id == id);
-                if (combatant) {
-                    combatant.manualOrder = idx;
-                }
-            });
-        } else {
-            // Update manual orders based on new DOM positions
-            const currentManualSorted = [...combatants].filter(c => c.manualOrder !== null)
-                .sort((a, b) => a.manualOrder - b.manualOrder);
-            
-            // Rebuild the order list
-            newOrder.forEach((id, idx) => {
-                const combatant = combatants.find(c => c.id == id);
-                if (combatant) {
-                    combatant.manualOrder = idx;
-                }
-            });
-        }
-        
+        // Lock in the new DOM order as the manual order for everyone
+        newOrder.forEach((id, idx) => {
+            const combatant = combatants.find(c => c.id == id);
+            if (combatant) {
+                combatant.manualOrder = idx;
+            }
+        });
+
         // Mark the dragged combatant as moved with direction relative to ORIGINAL position
         const draggedCombatant = combatants.find(c => c.id == draggedId);
         if (draggedCombatant) {
             const currentPosition = newIndex;
             const originalPosition = draggedCombatant.originalIndex;
-            
+
             if (originalPosition !== null && currentPosition !== originalPosition) {
                 draggedCombatant.wasMoved = true;
                 draggedCombatant.moveDirection = currentPosition > originalPosition ? 'down' : 'up';
@@ -1415,15 +1406,15 @@ function handleDrop(e) {
                 draggedCombatant.moveDirection = null;
             }
         }
-        
-        // Save manual reorder to history
-        saveToHistory();
+
+        // Reflect the reorder in this round's history entry
+        updateHistoryForCurrentRound();
         saveToFirebase();
     }
-    
+
     // Re-render to clean up any visual artifacts
     renderInitiativeOrder();
-    
+
     return false;
 }
 
@@ -1485,6 +1476,8 @@ function saveToFirebase() {
     });
 }
 
+let campaignDataUnsubscribe = null; // Active onValue listener for the current campaign
+
 function loadFromFirebase() {
     return new Promise((resolve) => {
         if (!currentCampaignId) {
@@ -1492,27 +1485,28 @@ function loadFromFirebase() {
             resolve();
             return;
         }
-        
+
+        // Detach the previous campaign's listener so switching campaigns doesn't
+        // leave a stale listener that clobbers state with the old campaign's data
+        if (campaignDataUnsubscribe) {
+            campaignDataUnsubscribe();
+            campaignDataUnsubscribe = null;
+        }
+
         const dbRef = window.firebaseRef(window.firebaseDB, `campaigns/${currentCampaignId}/data`);
-        
+
         // Listen for real-time updates
         let firstLoad = true;
-        window.firebaseOnValue(dbRef, (snapshot) => {
+        campaignDataUnsubscribe = window.firebaseOnValue(dbRef, (snapshot) => {
             const data = snapshot.val();
-            console.log('Firebase data received:', data);
-            
+
             if (data) {
                 isUpdatingFromFirebase = true;
-                
+
                 // Convert Firebase object/array to proper array and filter out null/undefined
                 let loadedCombatants = data.combatants || [];
-                console.log('Raw combatants from Firebase:', loadedCombatants);
-                console.log('Is array?', Array.isArray(loadedCombatants));
-                console.log('Type:', typeof loadedCombatants);
-                
                 if (typeof loadedCombatants === 'object' && !Array.isArray(loadedCombatants)) {
                     loadedCombatants = Object.values(loadedCombatants);
-                    console.log('Converted to array:', loadedCombatants);
                 }
                 
                 // Ensure all properties are null instead of undefined
@@ -1529,8 +1523,7 @@ function loadFromFirebase() {
                     moveDirection: c.moveDirection ?? null,
                     originalIndex: c.originalIndex ?? null
                 }));
-                console.log('Final combatants after filter:', combatants);
-                
+
                 let loadedHistory = data.initiativeHistory || [];
                 if (typeof loadedHistory === 'object' && !Array.isArray(loadedHistory)) {
                     loadedHistory = Object.values(loadedHistory);
@@ -1665,7 +1658,8 @@ function savePartyMember() {
     }
     
     if (editId) {
-        // Update existing combatant
+        // Update existing combatant and re-roll only them (their roll type or
+        // bonuses may have changed) - everyone else's initiative stands
         const combatant = combatants.find(c => c.id == editId);
         if (combatant) {
             combatant.name = name;
@@ -1674,18 +1668,19 @@ function savePartyMember() {
             combatant.type = type;
             combatant.advantage = advantage;
             combatant.lucky = lucky === 'none' ? null : lucky;
-            combatant.luckyUsed = false; // Reset lucky usage when editing
+            rollNewCombatant(combatant);
         }
     } else {
         // Add new combatant
         const newCombatant = {
-            id: Date.now(),
+            id: newId(),
             name: name,
             dex: dex,
             modifier: modifier,
             type: type,
             advantage: advantage,
             lucky: lucky === 'none' ? null : lucky,
+            luckyReroll: null,
             luckyUsed: false,
             initiative: 0,
             manualOrder: null,
@@ -1694,10 +1689,11 @@ function savePartyMember() {
             originalIndex: null
         };
         combatants.push(newCombatant);
+        rollNewCombatant(newCombatant);
     }
-    
+
     renderCombatantLists();
-    rollAllInitiative();
+    renderInitiativeOrder();
     saveToFirebase();
     closeAddEditPartyModal();
 }
@@ -1719,45 +1715,37 @@ function rerollLuckyFeat(id) {
     if (!confirm(`Use Lucky feat to reroll ${combatant.name}'s initiative?\n\nThis can only be used once per round.`)) {
         return;
     }
-    
+
     // Store the original roll (which was a 1)
     const originalRoll = combatant.baseRoll;
-    
-    // Perform the reroll
-    let roll;
-    if (combatant.advantage === 'advantage') {
-        const roll1 = rollD20();
-        const roll2 = rollD20();
-        roll = Math.max(roll1, roll2);
-        combatant.rolls = [roll1, roll2];
-    } else if (combatant.advantage === 'disadvantage') {
-        const roll1 = rollD20();
-        const roll2 = rollD20();
-        roll = Math.min(roll1, roll2);
-        combatant.rolls = [roll1, roll2];
-    } else {
-        roll = rollD20();
-        combatant.rolls = [roll];
-    }
-    
+
+    // Per RAW only the die that came up 1 is rerolled; with advantage or
+    // disadvantage the other die is kept and max/min re-applied
+    const rerolled = rerollNatOneDie(combatant.advantage, combatant.rolls);
+    const roll = rerolled.roll;
+    combatant.rolls = rerolled.rolls;
+
     // Calculate new initiative
     const dex = combatant.dex || 0;
     const modifier = combatant.modifier || 0;
     const initiativeBonus = dex + modifier;
-    
+
     combatant.initiative = roll + initiativeBonus;
     combatant.baseRoll = roll;
     combatant.luckyUsed = true;
     combatant.luckyReroll = originalRoll; // Store original 1 to display like halfling lucky
-    
+
+    // Move the card to where its new roll belongs, even if manual ordering is active
+    repositionCombatant(combatant);
+
     // Re-sort and update original indices
-    const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
+    const sorted = [...combatants].sort(initiativeComparator);
     sorted.forEach((c, index) => {
         c.originalIndex = index;
     });
-    
-    // Save to history and Firebase
-    saveToHistory();
+
+    // Amend this round's history entry and sync
+    updateHistoryForCurrentRound();
     saveToFirebase();
     renderInitiativeOrder();
 }
@@ -1796,8 +1784,9 @@ function setVisionMode(mode) {
     }
     // Save vision mode to localStorage (device-specific, not synced)
     localStorage.setItem('dndVisionMode', mode);
-    
+
     // Diagnostic logging
+    if (!DEBUG_FLAGS.VISION) return;
     console.log('=== COLORBLIND MODE DEBUG ===');
     console.log('Vision mode set to:', mode);
     console.log('Body data-vision attribute:', document.body.getAttribute('data-vision'));
@@ -1869,8 +1858,8 @@ function updateCampaignDropdown() {
         (campaigns[b].lastUpdated || 0) - (campaigns[a].lastUpdated || 0)
     );
     
-    dropdown.innerHTML = sorted.map(id => 
-        `<option value="${id}" ${id === currentCampaignId ? 'selected' : ''}>${campaigns[id].name}</option>`
+    dropdown.innerHTML = sorted.map(id =>
+        `<option value="${id}" ${id === currentCampaignId ? 'selected' : ''}>${escapeHtml(campaigns[id].name)}</option>`
     ).join('');
 }
 
@@ -1935,7 +1924,13 @@ async function deleteCampaign(campaignId) {
         alert('Cannot delete the last campaign');
         return;
     }
-    
+
+    // Confirm here (not in inline onclick) so names with quotes can't break markup
+    const campaignName = campaigns[campaignId] ? campaigns[campaignId].name : campaignId;
+    if (!confirm(`Delete ${campaignName}?`)) {
+        return;
+    }
+
     // Remove from local campaigns object first
     delete campaigns[campaignId];
     
@@ -1984,10 +1979,10 @@ function closeCampaignModal() {
     modal.style.display = 'none';
 }
 
-function showEditCampaignModal(campaignId, currentName) {
+function showEditCampaignModal(campaignId) {
     const modal = document.getElementById('editCampaignModal');
     document.getElementById('editCampaignId').value = campaignId;
-    document.getElementById('editCampaignName').value = currentName;
+    document.getElementById('editCampaignName').value = campaigns[campaignId] ? campaigns[campaignId].name : '';
     modal.style.display = 'flex';
 }
 
@@ -2018,14 +2013,14 @@ function renderCampaignList() {
         return `
             <div class="campaign-item ${isActive ? 'active' : ''}">
                 <div class="campaign-info">
-                    <strong>${campaigns[id].name}</strong>
+                    <strong>${escapeHtml(campaigns[id].name)}</strong>
                     ${isActive ? '<span class="badge">Active</span>' : ''}
                     <small>Last updated: ${lastUpdated}</small>
                 </div>
                 <div class="campaign-actions">
                     ${!isActive ? `<button class="btn btn-small btn-primary" onclick="switchCampaign('${id}')">Switch</button>` : ''}
-                    <button class="btn btn-small btn-secondary" onclick="showEditCampaignModal('${id}', '${campaigns[id].name.replace(/'/g, "\\'")}')" title="Rename">Edit</button>
-                    <button class="btn btn-small btn-danger" onclick="if(confirm('Delete ${campaigns[id].name}?')) deleteCampaign('${id}')" title="Delete">✖</button>
+                    <button class="btn btn-small btn-secondary" onclick="showEditCampaignModal('${id}')" title="Rename">Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteCampaign('${id}')" title="Delete">✖</button>
                 </div>
             </div>
         `;
@@ -2047,32 +2042,8 @@ function showHistoryModal() {
         const sorted = [...initiativeHistory].reverse();
         
         historyContent.innerHTML = sorted.map(record => {
-            // Sort by manual order if it exists, otherwise by initiative with tiebreakers
-            const sortedCombatants = [...record.combatants].sort((a, b) => {
-                if (a.manualOrder !== null && b.manualOrder !== null) {
-                    return a.manualOrder - b.manualOrder;
-                }
-                if (a.manualOrder !== null) return -1;
-                if (b.manualOrder !== null) return 1;
-                
-                // Sort by initiative
-                if (a.initiative !== b.initiative) {
-                    return b.initiative - a.initiative;
-                }
-                
-                // Tie in initiative - check dex
-                const aDex = a.dex || 0;
-                const bDex = b.dex || 0;
-                if (aDex !== bDex) {
-                    return bDex - aDex;
-                }
-                
-                // Still tied - player types go first
-                const typeOrder = { party: 0, friendly: 1, enemy: 2 };
-                const aTypeOrder = typeOrder[a.type] ?? 2;
-                const bTypeOrder = typeOrder[b.type] ?? 2;
-                return aTypeOrder - bTypeOrder;
-            });
+            // Same ordering rules as the live initiative display
+            const sortedCombatants = [...record.combatants].sort(initiativeComparator);
             
             return `
                 <div class="history-round">
@@ -2103,7 +2074,7 @@ function showHistoryModal() {
                                 <div class="history-item ${c.type}">
                                     <div class="history-roll">${c.initiative}${moveIndicator}</div>
                                     <div class="history-details">
-                                        <span class="history-name">${c.name}</span>
+                                        <span class="history-name">${escapeHtml(c.name)}</span>
                                         <span class="history-calc">${rollDisplay}</span>
                                     </div>
                                     <span class="history-type ${c.type}">${c.type}</span>
