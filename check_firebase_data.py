@@ -1,17 +1,21 @@
+import getpass
 import json
 import requests
 
 # Firebase configuration
 FIREBASE_API_KEY = "AIzaSyDfZqVNgz3bGNi2vaxiw6EpgGMiH9Ieo1Y"
 FIREBASE_DATABASE_URL = "https://dnd-initiative-roller-default-rtdb.firebaseio.com"
+# Same shared account the app signs in with (AUTH_EMAIL in app.js). The
+# password is prompted at runtime - never store it in this file.
+AUTH_EMAIL = "dm@dnd-initiative-roller.firebaseapp.com"
 
-def authenticate_anonymously():
-    """Authenticate anonymously with Firebase"""
-    # Firebase REST API for anonymous authentication
-    url = f"https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key={FIREBASE_API_KEY}"
+def authenticate():
+    """Sign in with the shared email/password account via the Firebase REST API"""
+    password = getpass.getpass(f"Password for {AUTH_EMAIL}: ")
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
     headers = {"Content-Type": "application/json"}
-    data = {"returnSecureToken": True}
-    
+    data = {"email": AUTH_EMAIL, "password": password, "returnSecureToken": True}
+
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
         auth_data = response.json()
@@ -108,7 +112,7 @@ def main():
     print("Database:", FIREBASE_DATABASE_URL)
     
     print("\nAuthenticating with Firebase...")
-    id_token = authenticate_anonymously()
+    id_token = authenticate()
     
     if not id_token:
         print("❌ Authentication failed")

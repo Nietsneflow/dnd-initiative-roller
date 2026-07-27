@@ -31,7 +31,13 @@ RECOMMENDED RULES (Most Secure - Campaign-Level Access):
           }
         },
         "data": {
-          ".validate": "newData.hasChildren(['combatants', 'currentRound', 'initiativeHistory', 'lastUpdated'])"
+          ".validate": "newData.hasChildren(['currentRound', 'lastUpdated'])",
+          "currentRound": {
+            ".validate": "newData.isNumber()"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isNumber()"
+          }
         }
       }
     },
@@ -68,6 +74,12 @@ RECOMMENDED RULES:
 - Root-level access is denied (only /campaigns/ is accessible)
 - Prevents writing invalid data structures
 
+IMPORTANT: The data validation only requires 'currentRound' and 'lastUpdated'.
+Do NOT require 'combatants' or 'initiativeHistory' - the Realtime Database
+strips empty arrays from writes, so a campaign with no combatants (or no
+history yet) would fail validation and silently stop syncing. This is exactly
+the state every newly created campaign starts in.
+
 SIMPLER RULES:
 - Only authenticated users can access campaigns
 - No data validation, but still secure
@@ -82,27 +94,41 @@ Firebase flags rules as "insecure" when:
 2. There's no user-specific access control
 3. Data isn't scoped to individual users
 
-This is ACCEPTABLE for your use case because:
-- Users need to know your app password first
-- All your DM devices need access to all campaigns
-- Anonymous auth prevents direct Firebase access
-- Your app is for trusted users (you and your players)
+With ANONYMOUS auth (the old setup) this warning was accurate: anyone could
+sign in anonymously and read/write everything. The app now uses EMAIL/PASSWORD
+sign-in with a single shared account and no public sign-up (see below), so
+"auth != null" really means "someone who knows the password". Firebase's
+automated scanner cannot see that distinction, so the warning email may still
+arrive - at that point it is a false positive and safe to mute
+(Project Settings -> email preferences).
 
-However, the recommended rules above add data validation and structure
-enforcement, which satisfies Firebase's security recommendations.
+This shared-account model fits this app because all DM devices and players
+need access to all campaigns.
 
 ==============================================================================
-ENABLE ANONYMOUS AUTHENTICATION:
+SET UP EMAIL/PASSWORD AUTHENTICATION (required):
 ==============================================================================
 
-You also need to enable Anonymous Authentication in Firebase:
+The app signs in with a single shared account. The email is hardcoded in
+app.js (AUTH_EMAIL) and is not a secret or a real inbox; the password is what
+users type at the login screen and is verified by Firebase, never stored in
+the code.
 
 1. In Firebase Console, click "Authentication" in the left menu
-2. Click "Get Started" if you haven't set up authentication yet
-3. Go to the "Sign-in method" tab
-4. Find "Anonymous" in the list of providers
-5. Click on it and toggle "Enable"
-6. Click "Save"
+2. Go to the "Sign-in method" tab
+3. Enable the "Email/Password" provider (leave "Email link" off)
+4. DISABLE the "Anonymous" provider (the app no longer uses it)
+5. Go to the "Users" tab and click "Add user"
+   - Email: the AUTH_EMAIL value from app.js
+     (currently dm@dnd-initiative-roller.firebaseapp.com)
+   - Password: the app password you want everyone to type at login
+6. To change the password later: delete and re-add the user (or use the
+   password reset flow), then everyone signs in again with the new one
+
+Do NOT enable any self-service sign-up UI - this project has none, and the
+Firebase project should contain only this one user. In Authentication ->
+Settings -> User actions, uncheck "Enable create (sign-up)" if available, so
+nobody can create additional accounts via the API.
 
 ==============================================================================
 TESTING:
@@ -116,8 +142,9 @@ After applying the RECOMMENDED rules:
 
 After applying the SIMPLER rules:
 1. Everything should work exactly as before
-2. Firebase warnings may still appear (they're overly cautious)
-3. Your app is still secure due to app password + anonymous auth
+2. Firebase warnings may still appear (the scanner can't tell that sign-up
+   is closed) - safe to mute
+3. Access still requires the shared account password, verified by Firebase
 
 ==============================================================================
 STOPPING FIREBASE WARNING EMAILS:

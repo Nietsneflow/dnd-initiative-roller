@@ -31,9 +31,11 @@ No tests exist. Verification is manual, in a browser:
 python -m http.server 8000    # from repo root, then open http://localhost:8000
 ```
 
-Password gate: `APP_PASSWORD` in `app.js` (currently `[REDACTED]`). The app needs the
-real Firebase backend (anonymous auth + Realtime DB) to get past login — there is no
-offline/mock mode. Deploy with `firebase deploy` (Firebase Hosting).
+Login: Firebase email/password auth with a single shared account. `AUTH_EMAIL` in
+`app.js` names the account (not a secret, not a real inbox); the password is set
+server-side in Firebase Console → Authentication → Users and never appears in the
+code or repo. The app needs the real Firebase backend to get past login — there is
+no offline/mock mode. Deploy with `firebase deploy` (Firebase Hosting).
 
 ## Core domain model
 
@@ -142,8 +144,10 @@ Before completing any change, verify:
 - DO NOT sacrifice D&D 5e rules accuracy for convenience.
 - Escape/sanitize anything interpolated into `innerHTML` (combatant and campaign
   names are user input rendered on every synced device).
-- The client-side `APP_PASSWORD` is a deliberate simplicity trade-off, not real
-  security — Firebase rules (`auth != null`) are the actual boundary.
+- Never reintroduce a client-side password constant or anonymous auth. The login
+  password must stay a server-side Firebase credential
+  (`signInWithEmailAndPassword` with `AUTH_EMAIL`) so `auth != null` in the
+  database rules remains a real boundary.
 
 ## Known issues / debt
 
@@ -155,10 +159,13 @@ see git history). Conventions those fixes introduced, to preserve:
 - Generate combatant IDs with `newId()`, never raw `Date.now()`.
 - Inline `onclick` handlers may interpolate only numeric IDs or campaign slugs —
   never names or other user text; look names up inside the handler instead.
-- Remember-me tokens are `btoa(APP_PASSWORD)` and are validated in `checkAuth()`,
-  so changing the password invalidates existing sessions.
-- The client-side password remains security-theater by design; Firebase rules are
-  the real boundary.
+- "Remember Me" is Firebase Auth persistence (local vs session), chosen via
+  `setPersistence()` before sign-in; there is no client-side token. Legacy
+  `dndAuthToken`/`dndAuthExpiry` localStorage keys are cleaned up on init
+  (`clearLegacyAuthTokens()`).
+- 2026-07-27: replaced the client-side password gate + anonymous auth with the
+  shared-account email/password sign-in and scrubbed the old password from git
+  history. Leftover anonymous sessions are signed out on init.
 
 ## History of this file
 

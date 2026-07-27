@@ -26,7 +26,11 @@ let isAdjustingSize = false;
 let pendingAdjustment = null;
 let lastAdjustmentTime = 0;
 
-const APP_PASSWORD = '[REDACTED]'; // CHANGE THIS TO YOUR PASSWORD
+// The password is NOT stored in this code. Login sends the entered password to
+// Firebase Authentication (email/password sign-in) using this fixed account
+// email; the password is set and verified server-side in the Firebase console.
+// The email is not a secret and is not a real inbox - it just names the account.
+const AUTH_EMAIL = 'dm@dnd-initiative-roller.firebaseapp.com';
 
 // ============================================================================
 // DOM ELEMENT REFERENCES
@@ -138,24 +142,12 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
-function checkAuth() {
-    const authToken = localStorage.getItem('dndAuthToken');
-    const authExpiry = localStorage.getItem('dndAuthExpiry');
-
-    if (authToken && authExpiry) {
-        const now = Date.now();
-        // Token must match the current password, so changing APP_PASSWORD
-        // invalidates every remembered session
-        if (authToken === btoa(APP_PASSWORD) && now < parseInt(authExpiry)) {
-            isAuthenticated = true;
-            return true;
-        }
-        // Token expired or stale (password changed)
-        localStorage.removeItem('dndAuthToken');
-        localStorage.removeItem('dndAuthExpiry');
-    }
-
-    return false;
+// Sessions are persisted by Firebase Auth itself (see the session restore in
+// init()). These localStorage tokens are leftovers from the old client-side
+// password gate - remove any that remain on devices that used it.
+function clearLegacyAuthTokens() {
+    localStorage.removeItem('dndAuthToken');
+    localStorage.removeItem('dndAuthExpiry');
 }
 
 function showPasswordModal() {
@@ -171,23 +163,10 @@ function hidePasswordModal() {
 
 function handlePasswordSubmit(e) {
     e.preventDefault();
-    
-    const enteredPassword = passwordInput.value;
 
-    if (enteredPassword === APP_PASSWORD) {
-        // Correct password - authenticate with Firebase
-        authenticateWithFirebase();
-    } else {
-        // Wrong password
-        passwordError.textContent = '❌ Incorrect password. Please try again.';
-        passwordError.classList.add('show');
-        passwordInput.value = '';
-        passwordInput.focus();
-        
-        setTimeout(() => {
-            passwordError.classList.remove('show');
-        }, 3000);
-    }
+    // The password is never compared client-side: Firebase verifies it as the
+    // credential of the shared account (AUTH_EMAIL)
+    authenticateWithFirebase();
 }
 
 async function authenticateWithFirebase() {
@@ -205,24 +184,23 @@ async function authenticateWithFirebase() {
         console.log('Waiting for Firebase...');
         await waitForFirebase();
         console.log('Firebase ready!');
-        
-        // Check if Firebase Anonymous Auth is enabled
-        console.log('Attempting anonymous sign in...');
-        const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
+
+        // "Remember Me" maps to Firebase Auth persistence: local survives
+        // browser restarts, session ends when the tab closes
+        const persistence = rememberMeCheckbox.checked
+            ? window.firebasePersistenceLocal
+            : window.firebasePersistenceSession;
+        await window.firebaseSetPersistence(window.firebaseAuth, persistence);
+
+        console.log('Signing in with email/password...');
+        const userCredential = await window.firebaseSignIn(window.firebaseAuth, AUTH_EMAIL, passwordInput.value);
         console.log('Firebase authentication successful!', userCredential.user.uid);
-        
+
         // Authentication successful
         isAuthenticated = true;
-        
-        // Save auth token if "Remember Me" is checked
-        if (rememberMeCheckbox.checked) {
-            const authToken = btoa(APP_PASSWORD);
-            const expiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days
-            localStorage.setItem('dndAuthToken', authToken);
-            localStorage.setItem('dndAuthExpiry', expiry.toString());
-            console.log('Auth token saved');
-        }
-        
+        clearLegacyAuthTokens();
+        passwordInput.value = '';
+
         hidePasswordModal();
         console.log('Initializing app...');
         await initializeApp(); // Continue with app initialization
@@ -235,17 +213,38 @@ async function authenticateWithFirebase() {
         console.error('Firebase authentication error:', error);
         console.error('Error code:', error.code);
         console.error('Error message:', error.message);
-        
+
+        // Wrong password: show the same friendly message as the old client-side
+        // gate, auto-hidden after a few seconds. (Which code Firebase returns
+        // depends on its email-enumeration-protection setting.)
+        const wrongPasswordCodes = ['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password', 'auth/missing-password'];
+        if (wrongPasswordCodes.includes(error.code)) {
+            passwordError.textContent = '❌ Incorrect password. Please try again.';
+            passwordError.style.background = '';
+            passwordError.style.borderColor = '';
+            passwordError.style.color = '';
+            passwordError.classList.add('show');
+            passwordInput.value = '';
+            passwordInput.focus();
+
+            setTimeout(() => {
+                passwordError.classList.remove('show');
+            }, 3000);
+            return;
+        }
+
         let errorMessage = '❌ Authentication failed. ';
-        
-        if (error.code === 'auth/operation-not-allowed') {
-            errorMessage += 'Anonymous authentication is not enabled in Firebase. Check FIREBASE_RULES.txt';
+
+        if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/user-not-found') {
+            errorMessage += 'Email/password sign-in is not set up in Firebase. Check FIREBASE_RULES.txt';
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMessage += 'Too many failed attempts. Please wait a bit and try again.';
         } else if (error.code === 'auth/network-request-failed') {
             errorMessage += 'Network error. Check your internet connection.';
         } else {
             errorMessage += error.message;
         }
-        
+
         passwordError.textContent = errorMessage;
         passwordError.style.background = 'rgba(220, 38, 38, 0.2)';
         passwordError.style.borderColor = '#dc2626';
@@ -253,7 +252,7 @@ async function authenticateWithFirebase() {
         passwordError.classList.add('show');
         passwordInput.value = '';
         passwordInput.focus();
-        
+
         // Don't auto-hide error for auth failures
     }
 }
@@ -263,13 +262,12 @@ function handleLogout() {
         // Release wake lock
         releaseWakeLock();
         
-        // Sign out from Firebase
+        // Sign out from Firebase (this also discards the persisted session)
         if (window.firebaseAuth && window.firebaseAuth.currentUser) {
             window.firebaseAuth.signOut().catch(err => console.error('Sign out error:', err));
         }
-        
-        localStorage.removeItem('dndAuthToken');
-        localStorage.removeItem('dndAuthExpiry');
+
+        clearLegacyAuthTokens();
         isAuthenticated = false;
         location.reload(); // Reload page to show password prompt
     }
@@ -279,7 +277,7 @@ function waitForFirebase(timeoutMs = 15000) {
     return new Promise((resolve, reject) => {
         const start = Date.now();
         const checkFirebase = setInterval(() => {
-            if (window.firebaseDB && window.firebaseAuth && window.firebaseSignInAnonymously) {
+            if (window.firebaseDB && window.firebaseAuth && window.firebaseSignIn) {
                 clearInterval(checkFirebase);
                 isFirebaseReady = true;
                 resolve();
@@ -367,46 +365,36 @@ async function init() {
         }
     });
     
-    // Check if user has valid app password token BEFORE waiting for Firebase
-    if (checkAuth()) {
-        console.log('✅ Valid auth token found, attempting Firebase authentication...');
-        // They have app token, try to authenticate with Firebase
-        try {
-            await waitForFirebase();
-            // Check if already signed in to Firebase
-            if (window.firebaseAuth.currentUser) {
-                console.log('✅ Already signed in to Firebase:', window.firebaseAuth.currentUser.uid);
-                isAuthenticated = true;
-                await initializeApp();
-            } else {
-                console.log('🔄 Signing in to Firebase anonymously...');
-                // Not signed in, do anonymous sign in
-                const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
-                console.log('✅ Firebase sign-in successful:', userCredential.user.uid);
-                isAuthenticated = true;
-                await initializeApp();
+    // Firebase Auth persists sessions itself ("Remember Me" → local
+    // persistence). Wait for it to restore any saved session before deciding
+    // whether to prompt for the password.
+    clearLegacyAuthTokens();
+    try {
+        await waitForFirebase();
+        const user = await new Promise((resolve) => {
+            const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, (u) => {
+                unsubscribe();
+                resolve(u);
+            });
+        });
+        if (user && !user.isAnonymous) {
+            console.log('✅ Restored Firebase session:', user.uid);
+            isAuthenticated = true;
+            await initializeApp();
+        } else {
+            if (user) {
+                // Leftover anonymous session from the old auth scheme - it
+                // doesn't prove knowledge of the password, so discard it
+                console.log('Discarding legacy anonymous session');
+                await window.firebaseAuth.signOut().catch(() => {});
             }
-        } catch (error) {
-            console.error('❌ Re-authentication failed:', error);
-            console.error('Error code:', error.code);
-            console.error('Error message:', error.message);
-            // Only clear token and show modal for real auth failures
-            if (error.code !== 'auth/user-already-exists') {
-                console.log('Clearing invalid auth tokens');
-                localStorage.removeItem('dndAuthToken');
-                localStorage.removeItem('dndAuthExpiry');
-                showPasswordModal();
-            } else {
-                // User already exists error - still authenticated
-                console.log('✅ User already exists in Firebase, continuing...');
-                isAuthenticated = true;
-                await initializeApp();
-            }
+            console.log('❌ No saved session, showing password modal');
+            showPasswordModal();
         }
-    } else {
-        console.log('❌ No valid auth token found, showing password modal');
-        // No authentication - show password modal (Firebase readiness is
-        // re-checked on submit, which surfaces its own error if loading failed)
+    } catch (error) {
+        console.error('❌ Session restore failed:', error);
+        // Password submit re-checks Firebase readiness and surfaces its own
+        // error if the SDK failed to load
         showPasswordModal();
     }
 }
@@ -1336,8 +1324,13 @@ function handleDragOver(e) {
     if (e.preventDefault) {
         e.preventDefault();
     }
+
+    // Ignore drags that didn't start on an initiative card (dragged text,
+    // links, or files) - appendChild(null) below would throw otherwise
+    if (!draggedElement) return false;
+
     e.dataTransfer.dropEffect = 'move';
-    
+
     // Get the element being dragged over
     const afterElement = getDragAfterElement(initiativeOrderDiv, e.clientY);
     const draggable = draggedElement;
@@ -1367,9 +1360,15 @@ function getDragAfterElement(container, y) {
 }
 
 function handleDrop(e) {
+    if (e.preventDefault) {
+        e.preventDefault(); // Stop the browser navigating when a link/file is dropped
+    }
     if (e.stopPropagation) {
         e.stopPropagation();
     }
+
+    // Nothing of ours is being dragged - ignore the drop
+    if (!draggedId) return false;
 
     // Get all initiative items in their current DOM order
     const items = [...initiativeOrderDiv.querySelectorAll('.initiative-item')];
@@ -1515,6 +1514,13 @@ function loadFromFirebase() {
                     ...c,
                     dex: c.dex ?? 0, // Default to 0 for old data
                     modifier: c.modifier ?? 0, // Default to 0 if missing
+                    advantage: c.advantage ?? 'normal',
+                    initiative: c.initiative ?? 0,
+                    baseRoll: c.baseRoll ?? 0,
+                    // Firebase drops empty arrays; old data may predate 'rolls'.
+                    // Without this, rolls.join() in render and Math.max(...rolls)
+                    // in the Lucky reroll path throw.
+                    rolls: c.rolls ?? (c.baseRoll != null ? [c.baseRoll] : []),
                     lucky: c.lucky ?? null, // Default to null if missing
                     luckyReroll: c.luckyReroll ?? null, // Default to null if missing
                     luckyUsed: c.luckyUsed ?? false, // Default to false if missing
@@ -1537,6 +1543,10 @@ function loadFromFirebase() {
                         ...c,
                         dex: c.dex ?? 0, // Default to 0 for old data
                         modifier: c.modifier ?? 0, // Default to 0 if missing
+                        advantage: c.advantage ?? 'normal',
+                        initiative: c.initiative ?? 0,
+                        baseRoll: c.baseRoll ?? 0,
+                        rolls: c.rolls ?? (c.baseRoll != null ? [c.baseRoll] : []),
                         manualOrder: c.manualOrder ?? null,
                         wasMoved: c.wasMoved ?? false,
                         moveDirection: c.moveDirection ?? null
@@ -1826,6 +1836,14 @@ async function loadCampaignList() {
                 // Build a fresh campaigns object from Firebase data
                 const newCampaigns = {};
                 Object.keys(data).forEach(id => {
+                    // Campaign IDs are interpolated into onclick="" handlers and
+                    // <option value="">, so only accept the slug charset that
+                    // createCampaign() generates - a hand-crafted Firebase key
+                    // must not be able to inject markup or script
+                    if (!/^[a-z0-9-]+$/.test(id)) {
+                        console.warn(`Ignoring campaign with invalid ID: ${id}`);
+                        return;
+                    }
                     if (data[id].meta && data[id].meta.name) {
                         newCampaigns[id] = {
                             name: data[id].meta.name,
@@ -1884,7 +1902,14 @@ function switchCampaign(campaignId) {
 async function createCampaign(name) {
     // Generate consistent campaign ID
     const campaignId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    
+
+    // A name with no letters/numbers produces an empty slug, which would be an
+    // invalid Firebase path
+    if (!campaignId) {
+        alert('Campaign name must contain at least one letter or number');
+        return;
+    }
+
     // Check if campaign already exists
     if (campaigns[campaignId]) {
         console.log(`Campaign ${campaignId} already exists`);

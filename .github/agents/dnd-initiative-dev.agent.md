@@ -11,7 +11,7 @@ You are a specialized development agent for the **D&D Initiative Roller** web ap
 ## Project Overview
 
 **Purpose**: Multi-device D&D 5e initiative tracker with real-time Firebase sync  
-**Tech Stack**: Vanilla JavaScript, HTML5, CSS3, Firebase Realtime Database, Firebase Anonymous Auth  
+**Tech Stack**: Vanilla JavaScript, HTML5, CSS3, Firebase Realtime Database, Firebase Email/Password Auth  
 **Target Users**: Dungeon Masters running combat encounters across tablets, TVs, and multiple devices
 
 ## Core Architecture Knowledge
@@ -28,15 +28,15 @@ You are a specialized development agent for the **D&D Initiative Roller** web ap
 
 #### 1. Firebase Integration
 - **Realtime Database**: Stores campaigns, combatants, initiative history, round tracking
-- **Anonymous Authentication**: User-facing password (`APP_PASSWORD` in app.js) + Firebase anonymous auth
+- **Email/Password Authentication**: single shared Firebase account (`AUTH_EMAIL` in app.js); password verified server-side by Firebase
 - **Real-time Sync**: `isUpdatingFromFirebase` flag prevents sync loops
 - **Campaign Structure**: `/campaigns/{campaignId}/` containing combatants, history, metadata
 
 #### 2. Authentication System
-- Password defined in `APP_PASSWORD` constant (default: `[REDACTED]`)
-- "Remember Me" feature with 30-day token expiration
+- Password is the shared Firebase account's credential, set in Firebase Console (never stored in code)
+- "Remember Me" feature via Firebase Auth persistence (local vs session)
 - Wake Lock API integration to prevent screen sleep during gameplay
-- Auth flow: Password validation → Firebase anonymous sign-in → App initialization
+- Auth flow: Firebase email/password sign-in → App initialization
 
 #### 3. Initiative Mechanics (D&D 5e)
 - **Roll Types**: Normal, Advantage (roll 2d20 keep highest), Disadvantage (roll 2d20 keep lowest)
@@ -156,8 +156,8 @@ isUpdatingFromFirebase = false; // Prevent sync loops
 - `setVisionMode(mode)` - Sets `data-vision` on body, logs all CSS color variables for debugging
 
 **Auth**
-- `checkAuth()` - Checks localStorage token expiry (30 days)
-- `authenticateWithFirebase()` - Anonymous sign-in; initializes app on success
+- `clearLegacyAuthTokens()` - Removes localStorage tokens from the old client-side gate
+- `authenticateWithFirebase()` - Email/password sign-in (shared account); initializes app on success
 - `requestWakeLock()` / `releaseWakeLock()` - Screen sleep prevention during gameplay
 
 **Debug System**
@@ -204,7 +204,7 @@ At the start of EVERY session and BEFORE starting any implementation:
 ### Firebase Troubleshooting
 - Check browser console for Firebase errors
 - Verify Firebase config in app.js matches console
-- Ensure Anonymous Auth is enabled in Firebase Console
+- Ensure Email/Password Auth is enabled and the shared user exists in Firebase Console
 - Review FIREBASE_RULES.txt for database rules
 - Test `check_firebase_data.py` to inspect data structure
 
@@ -243,7 +243,7 @@ Before marking any work complete, verify ALL items from `.copilot-checklist.md` 
 3. **Manual reordering** - Displays "MOVED UP ⬆️" indicators to show DM adjustments
 4. **Dynamic scaling** - Font sizes adjust based on combatant count (controlled by CSS variables)
 5. **No server backend** - Pure client-side with Firebase as backend service
-6. **Password in code** - Simple password auth (`APP_PASSWORD`) is intentional for ease of use
+6. **No password in code** - The login password is a Firebase credential verified server-side; only the non-secret account email (`AUTH_EMAIL`) lives in the code
 
 ## Constraints
 

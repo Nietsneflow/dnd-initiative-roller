@@ -40,7 +40,8 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
    - Go to https://firebase.google.com/
    - Create a new project
    - Enable **Realtime Database** (use test mode for development)
-   - Enable **Anonymous Authentication** under Authentication → Sign-in method
+   - Enable **Email/Password Authentication** under Authentication → Sign-in method
+   - Under Authentication → Users, add one user whose email matches the `AUTH_EMAIL` constant in `app.js`; its password becomes the app's login password (see `FIREBASE_RULES.txt` for details)
    
 2. Add your Firebase configuration to `index.html`:
    - Replace the `firebaseConfig` object in the module script at the bottom of `index.html` with your project's credentials
@@ -56,7 +57,7 @@ A powerful, multi-device D&D initiative tracker with real-time Firebase sync, ca
 
 2. Open http://localhost:8000 in your browser
 
-3. Enter the password (default: `[REDACTED]` - **change this in `app.js`**)
+3. Enter the password (the one you set on the Firebase user - it is not stored anywhere in the code)
 
 4. Create your first campaign and start adding combatants!
 
@@ -145,7 +146,7 @@ All devices connected to the same campaign sync automatically:
 ## Tips for DMs
 
 ### Setup
-- **Change the password** in `app.js` (`APP_PASSWORD` constant near the top) before deploying. Changing it also invalidates any "Remember Me" sessions saved with the old password.
+- **The password** is the Firebase account password, managed in Firebase Console → Authentication → Users. Changing it there invalidates existing sessions, so every device signs in again with the new one.
 - Create separate campaigns for different adventures or sessions
 - Add all party members once - they persist across sessions
 - Set up party members with Lucky features (Halflings get Lucky-H, anyone can have Lucky-F feat)
@@ -222,15 +223,12 @@ Both are secure - the first adds data validation to satisfy Firebase's security 
 
 ### Authentication
 
-The app uses Firebase Anonymous Authentication. Users must:
-1. Enter the app password (set in `app.js`)
-2. Authenticate with Firebase anonymously
-3. Access is then granted to all campaigns
+The app uses Firebase Email/Password Authentication with a single shared account:
+1. The account email is the `AUTH_EMAIL` constant in `app.js` - it is not a secret and not a real inbox, it just names the account
+2. The password the user types at login is sent to Firebase as that account's credential and verified server-side - it never appears in the code
+3. On success, access is granted to all campaigns; "Remember Me" uses Firebase's own session persistence
 
-Change the password in `app.js`:
-```javascript
-const APP_PASSWORD = 'your-password-here';
-```
+To change the password, update the user's password in Firebase Console → Authentication → Users.
 
 ### Database Structure
 
@@ -292,15 +290,15 @@ Requires JavaScript enabled and localStorage support.
 - Existing data will be automatically migrated.
 
 ### Firebase connection issues
-- Check that Anonymous Authentication is enabled
+- Check that Email/Password Authentication is enabled and the shared user exists (email matching `AUTH_EMAIL` in `app.js`)
 - Verify your Firebase config in `index.html` is correct
 - Check browser console for specific error messages
 - Ensure database rules allow authenticated reads/writes
 
 ### Password not working
-- Make sure you changed `APP_PASSWORD` in `app.js`
-- Clear browser cache and try again
-- "Remember Me" tokens are tied to the current password, so changing the password automatically requires re-entry on all devices
+- The password is the Firebase user's password (Firebase Console → Authentication → Users), not anything in the code
+- Repeated wrong attempts trigger Firebase rate limiting - wait a few minutes and try again
+- Changing the password in Firebase invalidates existing sessions, so all devices must sign in again
 
 ## Contributing
 
